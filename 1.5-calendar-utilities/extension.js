@@ -1,15 +1,66 @@
 // ===================================================================
-// 🔧 CALENDAR UTILITIES EXTENSION v1.1 - Improved with Legacy Patterns
-// Comprehensive toolkit for calendar extensions
-// Enhanced with proven patterns from legacy implementations
+// Calendar Utilities Extension v1.1 - The Consolidated Toolkit
+// 🆕 NEW FEATURES:
+// - Configurable week start day (Monday default, future-proof for other days)
+// - Updated configuration format (single colons + bold headers)
 // ===================================================================
 
 // ===================================================================
-// ⏰ DATE AND TIME UTILITIES - Professional Date Operations
+// 🔧 CORE DATE & TIME UTILITIES - Enhanced with Configurable Week Start
 // ===================================================================
 
 const DateTimeUtils = {
-  // 📅 FORMAT DATE FOR ROAM - Convert JavaScript date to Roam's daily note format
+  // 📅 CONFIGURABLE WEEK START DAY
+  // 0 = Sunday, 1 = Monday, 2 = Tuesday, etc.
+  // Default to Monday (1) - can be overridden via configuration
+  DEFAULT_WEEK_START_DAY: 1, // Monday
+
+  // 🔧 GET CONFIGURED WEEK START DAY - Read from config or use default
+  getWeekStartDay: () => {
+    try {
+      const configValue = ConfigUtils.readConfigValue(
+        "roam/ext/monthly view/config",
+        "week-start-day",
+        DateTimeUtils.DEFAULT_WEEK_START_DAY
+      );
+
+      // Ensure it's a valid day (0-6)
+      const dayNum = parseInt(configValue);
+      if (dayNum >= 0 && dayNum <= 6) {
+        return dayNum;
+      }
+
+      console.warn(
+        `⚠️ Invalid week start day: ${configValue}, using default (Monday)`
+      );
+      return DateTimeUtils.DEFAULT_WEEK_START_DAY;
+    } catch (error) {
+      console.warn(`⚠️ Error reading week start day config:`, error);
+      return DateTimeUtils.DEFAULT_WEEK_START_DAY;
+    }
+  },
+
+  // 📅 ROAM DATE PARSING - Convert Roam daily note format to Date objects
+  parseRoamDate: (roamDateString) => {
+    try {
+      // Handle Roam's daily note format: "January 15th, 2024"
+      const cleanString = roamDateString
+        .replace(/(\d+)(st|nd|rd|th)/, "$1") // Remove ordinal suffixes
+        .trim();
+
+      const date = new Date(cleanString);
+      if (isNaN(date.getTime())) {
+        console.warn(`⚠️ Could not parse Roam date: ${roamDateString}`);
+        return null;
+      }
+      return date;
+    } catch (error) {
+      console.error(`❌ Error parsing Roam date "${roamDateString}":`, error);
+      return null;
+    }
+  },
+
+  // 📅 FORMAT DATE FOR ROAM - Convert Date object to Roam daily note format
   formatDateForRoam: (date) => {
     const monthNames = [
       "January",
@@ -29,66 +80,12 @@ const DateTimeUtils = {
     const month = monthNames[date.getMonth()];
     const day = date.getDate();
     const year = date.getFullYear();
-
-    // Add proper suffix
     const suffix = DateTimeUtils.getDaySuffix(day);
 
     return `${month} ${day}${suffix}, ${year}`;
   },
 
-  // 📅 PARSE ROAM DATE - Convert Roam date string back to JavaScript Date
-  parseRoamDate: (roamDateString) => {
-    try {
-      // Handle "January 1st, 2024" format
-      const match = roamDateString.match(
-        /^([A-Za-z]+) (\d{1,2})(st|nd|rd|th)?, (\d{4})$/
-      );
-      if (!match) return null;
-
-      const monthNames = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-
-      const monthName = match[1];
-      const day = parseInt(match[2]);
-      const year = parseInt(match[4]);
-      const monthIndex = monthNames.indexOf(monthName);
-
-      if (monthIndex === -1) return null;
-
-      return new Date(year, monthIndex, day);
-    } catch (error) {
-      console.error(`❌ Error parsing Roam date "${roamDateString}":`, error);
-      return null;
-    }
-  },
-
-  // 🔢 GET DAY NAME - Convert day number to name
-  getDayName: (dayNumber) => {
-    const dayNames = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
-    return dayNames[dayNumber];
-  },
-
-  // 🔢 GET DAY SUFFIX - Get ordinal suffix for day numbers
+  // 📅 GET DAY SUFFIX - Add proper ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
   getDaySuffix: (day) => {
     if (day > 10 && day < 20) return "th";
     const lastDigit = day % 10;
@@ -98,20 +95,25 @@ const DateTimeUtils = {
     return "th";
   },
 
-  // 📅 GET WEEK START DATE - Get Sunday of the week containing the given date
+  // 📅 GET WEEK START DATE - Get start of week based on configured start day
   getWeekStartDate: (date) => {
     const startOfWeek = new Date(date);
     const dayOfWeek = startOfWeek.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+    const weekStartDay = DateTimeUtils.getWeekStartDay();
+
+    // Calculate days to subtract to get to the configured week start
+    let daysToSubtract = (dayOfWeek - weekStartDay + 7) % 7;
+
+    startOfWeek.setDate(startOfWeek.getDate() - daysToSubtract);
     startOfWeek.setHours(0, 0, 0, 0); // Start of day
     return startOfWeek;
   },
 
-  // 📅 GET WEEK END DATE - Get Saturday of the week containing the given date
+  // 📅 GET WEEK END DATE - Get end of week based on configured start day
   getWeekEndDate: (date) => {
-    const endOfWeek = new Date(date);
-    const dayOfWeek = endOfWeek.getDay();
-    endOfWeek.setDate(endOfWeek.getDate() + (6 - dayOfWeek));
+    const startOfWeek = DateTimeUtils.getWeekStartDate(date);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6); // Add 6 days to get end of week
     endOfWeek.setHours(23, 59, 59, 999); // End of day
     return endOfWeek;
   },
@@ -159,70 +161,47 @@ const DateTimeUtils = {
 // ===================================================================
 
 const RoamUtils = {
-  // 🔍 GET CURRENT PAGE TITLE - Robust page detection using proven legacy patterns
+  // 🔍 GET CURRENT PAGE TITLE - Detect what page user is currently viewing
   getCurrentPageTitle: () => {
     try {
-      // Method 1: Try to get from title display element (primary method)
-      const titleElement = document.querySelector(".rm-title-display span");
-      if (titleElement && titleElement.textContent.trim()) {
-        console.log(
-          "📍 Found page title via DOM:",
-          titleElement.textContent.trim()
-        );
-        return titleElement.textContent.trim();
+      // Try to get from URL first
+      const url = window.location.href;
+      const pageMatch = url.match(/\/page\/(.+)$/);
+
+      if (pageMatch) {
+        return decodeURIComponent(pageMatch[1]);
       }
 
-      // Method 2: Try alternative title selector
-      const altTitleElement = document.querySelector("h1.rm-title-display");
-      if (altTitleElement && altTitleElement.textContent.trim()) {
-        console.log(
-          "📍 Found page title via alt DOM:",
-          altTitleElement.textContent.trim()
-        );
-        return altTitleElement.textContent.trim();
+      // Try to get from DOM
+      const titleElement = document.querySelector(
+        ".roam-log-page h1 .rm-title-display span"
+      );
+      if (titleElement) {
+        return titleElement.textContent;
       }
 
-      // Method 3: Parse from URL hash (handles different URL formats)
-      const hash = window.location.hash;
-      console.log("📍 Current hash:", hash);
-
-      // Handle /page/ format
-      if (hash.includes("/page/")) {
-        const pageMatch = hash.match(/\/page\/(.+?)(?:$|\?)/);
-        if (pageMatch) {
-          const pageTitle = decodeURIComponent(pageMatch[1]);
-          console.log("📍 Found page title via URL:", pageTitle);
-          return pageTitle;
-        }
-      }
-
-      // Handle /graph/[graph-id]/page/ format
-      if (hash.includes("/graph/")) {
-        const pageMatch = hash.match(/\/graph\/[^/]+\/page\/(.+?)(?:$|\?)/);
-        if (pageMatch) {
-          const pageTitle = decodeURIComponent(pageMatch[1]);
-          console.log("📍 Found page title via graph URL:", pageTitle);
-          return pageTitle;
-        }
-      }
-
-      console.log("📍 Could not determine page title");
-      return null;
+      // Fallback to today's daily note
+      return DateTimeUtils.formatDateForRoam(new Date());
     } catch (error) {
       console.error("❌ Error getting current page title:", error);
-      return null;
+      return DateTimeUtils.formatDateForRoam(new Date());
     }
   },
 
   // 🔍 GET PAGE UID - Get the UID of a page by title
   getPageUid: (pageTitle) => {
     try {
-      const result = window.roamAlphaAPI.data.q(`
+      const result = window.roamAlphaAPI.data.q(
+        `
         [:find ?uid .
-         :where 
-         [?e :node/title "${pageTitle}"]
-         [?e :block/uid ?uid]]
-      `);
+         :in $ ?title
+         :where
+         [?page :node/title ?title]
+         [?page :block/uid ?uid]]
+      `,
+        pageTitle
+      );
+
       return result || null;
     } catch (error) {
       console.error(`❌ Error getting page UID for "${pageTitle}":`, error);
@@ -230,56 +209,71 @@ const RoamUtils = {
     }
   },
 
-  // 🔍 CHECK IF PAGE EXISTS - Verify if a page exists in the graph
+  // 🔍 PAGE EXISTS - Check if a page exists in the database
   pageExists: (pageTitle) => {
     return RoamUtils.getPageUid(pageTitle) !== null;
   },
 
-  // 📝 CREATE PAGE - Create a new page with optional content
-  createPage: async (pageTitle, initialBlocks = []) => {
+  // 📝 CREATE PAGE - Create a new page with initial content (FIXED API)
+  createPage: async (pageTitle, contentArray = []) => {
     try {
-      // Create the page
+      console.log(`🔧 Creating page: "${pageTitle}"`);
+
+      // Create the page using correct API
       await window.roamAlphaAPI.data.page.create({
         page: { title: pageTitle },
       });
 
-      // Wait for page creation
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Wait for page creation to complete
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Add initial blocks if provided
-      if (initialBlocks.length > 0) {
-        const pageUid = RoamUtils.getPageUid(pageTitle);
-        if (pageUid) {
-          for (let i = 0; i < initialBlocks.length; i++) {
-            await RoamUtils.createBlock(pageUid, initialBlocks[i], i);
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-        }
+      // Get the page UID
+      const pageUid = RoamUtils.getPageUid(pageTitle);
+      if (!pageUid) {
+        throw new Error(`Failed to get UID for created page: ${pageTitle}`);
       }
 
-      console.log(`✅ Created page: ${pageTitle}`);
-      return true;
+      console.log(`✅ Page created with UID: ${pageUid}`);
+
+      // Add content if provided
+      if (contentArray.length > 0) {
+        console.log(`📝 Adding ${contentArray.length} content blocks...`);
+
+        for (let i = 0; i < contentArray.length; i++) {
+          const content = contentArray[i];
+          if (content && content.trim()) {
+            try {
+              await window.roamAlphaAPI.data.block.create({
+                location: {
+                  "parent-uid": pageUid,
+                  order: i,
+                },
+                block: {
+                  string: content,
+                },
+              });
+
+              // Small delay between blocks
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            } catch (blockError) {
+              console.warn(
+                `⚠️ Error creating block ${i}: ${blockError.message}`
+              );
+            }
+          }
+        }
+
+        console.log(`✅ Content blocks added to "${pageTitle}"`);
+      }
+
+      return pageUid;
     } catch (error) {
       console.error(`❌ Error creating page "${pageTitle}":`, error);
-      return false;
+      return null;
     }
   },
 
-  // 📝 CREATE BLOCK - Create a new block with content
-  createBlock: async (parentUid, content, order = 0) => {
-    try {
-      await window.roamAlphaAPI.data.block.create({
-        location: { "parent-uid": parentUid, order: order },
-        block: { string: content },
-      });
-      return true;
-    } catch (error) {
-      console.error(`❌ Error creating block:`, error);
-      return false;
-    }
-  },
-
-  // 🔍 QUERY BLOCKS - Search for blocks with specific content
+  // 🔍 QUERY BLOCKS - Search for blocks containing a pattern
   queryBlocks: (pageTitle, searchPattern) => {
     try {
       const results = window.roamAlphaAPI.data.q(
@@ -289,8 +283,8 @@ const RoamUtils = {
          :where
          [?page :node/title ?page-title]
          [?page :block/children ?block]
-         [?block :block/string ?string]
          [?block :block/uid ?uid]
+         [?block :block/string ?string]
          [(clojure.string/includes? ?string ?pattern)]]
       `,
         pageTitle,
@@ -510,7 +504,7 @@ const MonthlyUtils = {
     const firstDay = new Date(year, monthIndex, 1);
     const lastDay = new Date(year, monthIndex + 1, 0);
 
-    // Start from the Sunday of the week containing the first day
+    // Start from the configured week start day for the week containing the first day
     let currentWeekStart = DateTimeUtils.getWeekStartDate(firstDay);
 
     while (currentWeekStart <= lastDay) {
@@ -641,31 +635,51 @@ const ContentUtils = {
 };
 
 // ===================================================================
-// 🎛️ CONFIGURATION UTILITIES - Professional Settings Management
+// 🎛️ CONFIGURATION UTILITIES - Updated with Single Colon Format
 // ===================================================================
 
 const ConfigUtils = {
-  // 📋 CREATE DEFAULT CONFIG - Initialize configuration page
+  // 📋 CREATE DEFAULT CONFIG - Initialize configuration page with enhanced error handling
   createDefaultConfig: async (configPageTitle, sections = []) => {
     try {
+      console.log(`🔧 Checking config page: "${configPageTitle}"`);
+
+      // Check if page already exists
       if (RoamUtils.pageExists(configPageTitle)) {
-        console.log(`📋 Config page "${configPageTitle}" already exists`);
+        console.log(
+          `📋 Config page "${configPageTitle}" already exists - skipping creation`
+        );
         return true;
       }
 
+      console.log(`🚀 Creating new config page: "${configPageTitle}"`);
+      console.log(`📄 Content sections:`, sections);
+
       // Create the config page
-      await RoamUtils.createPage(configPageTitle, sections);
-      console.log(`✅ Created config page: ${configPageTitle}`);
-      return true;
+      const pageUid = await RoamUtils.createPage(configPageTitle, sections);
+
+      if (pageUid) {
+        console.log(
+          `✅ Created config page: "${configPageTitle}" with UID: ${pageUid}`
+        );
+        return true;
+      } else {
+        console.error(`❌ Failed to create config page: "${configPageTitle}"`);
+        return false;
+      }
     } catch (error) {
-      console.error(`❌ Error creating config "${configPageTitle}":`, error);
+      console.error(
+        `❌ Error in createDefaultConfig for "${configPageTitle}":`,
+        error
+      );
       return false;
     }
   },
 
-  // 🔍 READ CONFIG VALUE - Get configuration value from config page
+  // 🔍 READ CONFIG VALUE - Updated to work with single colon format
   readConfigValue: (configPageTitle, key, defaultValue = null) => {
     try {
+      // Updated query to look for single colon format: "key: value"
       const results = window.roamAlphaAPI.data.q(
         `
         [:find ?value .
@@ -675,6 +689,7 @@ const ConfigUtils = {
          [?config :block/children ?child]
          [?child :block/string ?string]
          [(clojure.string/includes? ?string ?key)]
+         [(clojure.string/includes? ?string ":")]
          [?child :block/children ?value-block]
          [?value-block :block/string ?value]]
       `,
@@ -689,12 +704,12 @@ const ConfigUtils = {
     }
   },
 
-  // 📝 WRITE CONFIG VALUE - Set configuration value in config page
+  // 📝 WRITE CONFIG VALUE - Set configuration value in config page (single colon format)
   writeConfigValue: async (configPageTitle, key, value) => {
     try {
       // This is a simplified implementation
       // In practice, you'd want more sophisticated config management
-      console.log(`💾 Config set: ${key} = ${value} in ${configPageTitle}`);
+      console.log(`💾 Config set: ${key}: ${value} in ${configPageTitle}`);
       return true;
     } catch (error) {
       console.error(`❌ Error writing config "${key}":`, error);
@@ -719,7 +734,12 @@ const CalendarUtilities = {
   // 📊 UTILITY STATUS - Get status of all utilities
   getStatus: () => {
     return {
-      version: "1.1.0", // Updated version with legacy patterns
+      version: "1.1.0",
+      features: [
+        "Configurable week start day (Monday default)",
+        "Single colon configuration format",
+        "Bold headers in config pages",
+      ],
       modules: {
         DateTimeUtils: Object.keys(DateTimeUtils).length,
         RoamUtils: Object.keys(RoamUtils).length,
@@ -735,13 +755,20 @@ const CalendarUtilities = {
         Object.keys(MonthlyUtils).length +
         Object.keys(ContentUtils).length +
         Object.keys(ConfigUtils).length,
+      weekStartDay: {
+        current: DateTimeUtils.getWeekStartDay(),
+        default: DateTimeUtils.DEFAULT_WEEK_START_DAY,
+        options: {
+          0: "Sunday",
+          1: "Monday",
+          2: "Tuesday",
+          3: "Wednesday",
+          4: "Thursday",
+          5: "Friday",
+          6: "Saturday",
+        },
+      },
       loaded: new Date().toISOString(),
-      improvements: [
-        "Robust getCurrentPageTitle() using proven legacy patterns",
-        "Enhanced URL parsing for different Roam URL formats",
-        "Better DOM selector strategies",
-        "Improved error handling and logging",
-      ],
     };
   },
 
@@ -774,7 +801,7 @@ const CalendarUtilities = {
 };
 
 // ===================================================================
-// 🚀 ROAM EXTENSION EXPORT - Professional Calendar Utilities
+// 🚀 ROAM EXTENSION EXPORT - Professional Calendar Utilities v1.1
 // ===================================================================
 
 export default {
@@ -787,21 +814,69 @@ export default {
     // 🔗 REGISTER WITH CALENDAR FOUNDATION
     const platformRegistered = CalendarUtilities.registerWithPlatform();
 
-    // 📋 CREATE UTILITIES CONFIG
-    await ConfigUtils.createDefaultConfig("Calendar Utilities/Config", [
-      "settings::",
-      "version:: 1.1.0",
-      "enabled:: true",
-    ]);
+    // 📋 CREATE UTILITIES CONFIG - Updated format with bold headers and single colons
+    console.log("🔧 Creating Calendar Utilities config page...");
+    const utilitiesConfigSuccess = await ConfigUtils.createDefaultConfig(
+      "Calendar Utilities/Config",
+      [
+        "**SETTINGS:**",
+        "    version: 1.1.0",
+        "    enabled: true",
+        "",
+        "**WEEK CONFIGURATION:**",
+        "    week-start-day: 1",
+        "        - 0: Sunday",
+        "        - 1: Monday (default)",
+        "        - 2: Tuesday",
+        "        - 3: Wednesday",
+        "        - 4: Thursday",
+        "        - 5: Friday",
+        "        - 6: Saturday",
+      ]
+    );
+
+    if (!utilitiesConfigSuccess) {
+      console.warn("⚠️ Could not create Calendar Utilities config page");
+    }
+
+    // 🔧 CREATE MONTHLY VIEW CONFIG - New format with proper color tags and indentation
+    console.log("🔧 Creating Monthly View config page...");
+    const monthlyConfigSuccess = await ConfigUtils.createDefaultConfig(
+      "roam/ext/monthly view/config",
+      [
+        "**COLORS:**",
+        "    MON: #clr-lgt-grn",
+        "    TUE: #clr-lgt-grn",
+        "    WED: #clr-grn",
+        "    THU: #clr-lgt-grn",
+        "    FRI: #clr-lgt-grn",
+        "    SAT: #clr-lgt-ylo",
+        "    SUN: #clr-lgt-brn",
+        "",
+        "**SETTINGS:**",
+        "    auto-detect: yes",
+        "    show-monthly-todo: yes",
+        "    week-start-day: 1",
+      ]
+    );
+
+    if (!monthlyConfigSuccess) {
+      console.warn("⚠️ Could not create Monthly View config page");
+      console.log(
+        "💡 Use command palette: 'Calendar Utilities: Recreate Monthly View Config' to fix this"
+      );
+    }
 
     // 🎯 REGISTER WITH PLATFORM
     if (window.CalendarSuite) {
       window.CalendarSuite.register("calendar-utilities", CalendarUtilities, {
         name: "Calendar Utilities",
-        description: "Comprehensive toolkit for calendar extensions",
+        description:
+          "Comprehensive toolkit for calendar extensions with configurable week start",
         version: "1.1.0",
         dependencies: ["calendar-foundation"],
         provides: [
+          "configurable-week-start",
           "date-time-utilities",
           "roam-integration",
           "weekly-page-detection",
@@ -812,20 +887,39 @@ export default {
       });
     }
 
-    // 📝 ADD COMMAND PALETTE COMMANDS
+    // 📝 ADD COMMAND PALETTE COMMANDS - Updated with new features
     const commands = [
       {
         label: "Calendar Utilities: Show Status",
         callback: () => {
           const status = CalendarUtilities.getStatus();
           console.log("🔧 Calendar Utilities Status:", status);
+          console.log(
+            `📅 Week starts on: ${
+              status.weekStartDay.options[status.weekStartDay.current]
+            }`
+          );
         },
       },
       {
         label: "Calendar Utilities: Test Date Functions",
         callback: () => {
           const today = new Date();
+          const weekStartDay = DateTimeUtils.getWeekStartDay();
           console.log("📅 Date Function Tests:");
+          console.log(
+            `- Week start day: ${weekStartDay} (${
+              [
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+              ][weekStartDay]
+            })`
+          );
           console.log(
             "- Today (Roam format):",
             DateTimeUtils.formatDateForRoam(today)
@@ -860,33 +954,98 @@ export default {
         },
       },
       {
-        label: "Calendar Utilities: Debug Page Title Detection",
+        label: "Calendar Utilities: Change Week Start Day",
         callback: () => {
-          console.log("🔍 Page Title Detection Debug:");
-
-          // Test all methods
-          const titleElement = document.querySelector(".rm-title-display span");
+          const options = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+          ];
+          const current = DateTimeUtils.getWeekStartDay();
+          console.log(`🗓️ Current week start day: ${options[current]}`);
           console.log(
-            "- DOM method 1:",
-            titleElement ? titleElement.textContent.trim() : "Not found"
+            "📝 To change, update 'week-start-day' in the config page to desired value (0-6)"
+          );
+          console.log(
+            "Available options:",
+            options.map((day, index) => `${index}: ${day}`).join(", ")
+          );
+        },
+      },
+      {
+        label: "Calendar Utilities: Recreate Monthly View Config",
+        callback: async () => {
+          console.log("🔧 Recreating Monthly View config page...");
+
+          // Force recreate the config page
+          const configPageTitle = "roam/ext/monthly view/config";
+          const configContent = [
+            "**COLORS:**",
+            "    MON: #clr-lgt-grn",
+            "    TUE: #clr-lgt-grn",
+            "    WED: #clr-grn",
+            "    THU: #clr-lgt-grn",
+            "    FRI: #clr-lgt-grn",
+            "    SAT: #clr-lgt-ylo",
+            "    SUN: #clr-lgt-brn",
+            "",
+            "**SETTINGS:**",
+            "    auto-detect: yes",
+            "    show-monthly-todo: yes",
+            "    week-start-day: 1",
+          ];
+
+          // Delete existing page if it exists (to force recreation)
+          const existingUid = RoamUtils.getPageUid(configPageTitle);
+          if (existingUid) {
+            console.log(`🗑️ Removing existing config page...`);
+            try {
+              await window.roamAlphaAPI.data.page.delete({
+                page: { uid: existingUid },
+              });
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            } catch (e) {
+              console.warn("Could not delete existing page:", e);
+            }
+          }
+
+          // Create new config page
+          const success = await ConfigUtils.createDefaultConfig(
+            configPageTitle,
+            configContent
           );
 
-          const altTitleElement = document.querySelector("h1.rm-title-display");
-          console.log(
-            "- DOM method 2:",
-            altTitleElement ? altTitleElement.textContent.trim() : "Not found"
-          );
+          if (success) {
+            console.log("✅ Monthly View config page recreated successfully!");
+            console.log(`📄 Navigate to: [[${configPageTitle}]]`);
+          } else {
+            console.error("❌ Failed to recreate config page");
+          }
+        },
+      },
+      {
+        label: "Calendar Utilities: Debug Config Pages",
+        callback: () => {
+          console.log("🔍 Debugging config pages...");
 
-          const hash = window.location.hash;
-          console.log("- URL hash:", hash);
+          const pagesToCheck = [
+            "roam/ext/monthly view/config",
+            "Calendar Utilities/Config",
+          ];
 
-          const currentTitle = RoamUtils.getCurrentPageTitle();
-          console.log("- Final result:", currentTitle);
+          pagesToCheck.forEach((pageTitle) => {
+            const exists = RoamUtils.pageExists(pageTitle);
+            const uid = RoamUtils.getPageUid(pageTitle);
+            console.log(`📄 "${pageTitle}": exists=${exists}, uid=${uid}`);
+          });
+
           console.log(
-            "- Is monthly?",
-            MonthlyUtils.isMonthlyPage(currentTitle)
+            "💡 If pages are missing, use 'Recreate Monthly View Config' command"
           );
-          console.log("- Is weekly?", WeeklyUtils.isWeeklyPage(currentTitle));
         },
       },
     ];
@@ -906,8 +1065,31 @@ export default {
       } modules`
     );
     console.log(
-      "🔍 Improved with robust page detection patterns from legacy code"
+      `📅 Week starts on: ${
+        [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ][DateTimeUtils.getWeekStartDay()]
+      }`
     );
+
+    // Check config page status
+    const monthlyConfigExists = RoamUtils.pageExists(
+      "roam/ext/monthly view/config"
+    );
+    if (monthlyConfigExists) {
+      console.log("📄 Monthly View config page: ✅ Available");
+    } else {
+      console.warn("📄 Monthly View config page: ❌ Missing");
+      console.log(
+        "💡 Run command: 'Calendar Utilities: Recreate Monthly View Config' to fix this"
+      );
+    }
 
     if (platformRegistered) {
       console.log(

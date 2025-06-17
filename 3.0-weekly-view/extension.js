@@ -1,8 +1,8 @@
 // ===================================================================
-// 📅 WEEKLY VIEW EXTENSION v2.0 - Professional Calendar Suite
+// 📅 WEEKLY VIEW EXTENSION v2.1 - Professional Calendar Suite
 // ===================================================================
 // Auto-detects weekly calendar pages and offers to populate with monthly calendar embeds
-// Rewritten to use Calendar Utilities foundation with preserved legacy functionality
+// Rewritten to use Calendar Utilities foundation with redesigned configuration
 
 // Wrap everything in an IIFE to avoid global variable conflicts
 (function () {
@@ -14,7 +14,7 @@
   let weeklyViewTimeout = null;
 
   // ===================================================================
-  // 🌳 CONFIGURATION MANAGEMENT - Updated for new architecture
+  // 🌳 CONFIGURATION MANAGEMENT - Redesigned Structure
   // ===================================================================
 
   async function initializeConfig() {
@@ -68,17 +68,12 @@
 
       if (!pageUid) throw new Error("Could not find created config page");
 
-      // Create the configuration blocks
-      const configBlocks = ["settings::", "features::"];
-
-      // Add main sections
-      for (let i = 0; i < configBlocks.length; i++) {
-        await window.roamAlphaAPI.data.block.create({
-          location: { "parent-uid": pageUid, order: i },
-          block: { string: configBlocks[i] },
-        });
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
+      // Create the main Settings section (bold)
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": pageUid, order: 0 },
+        block: { string: "**Settings:**" },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Get settings block UID
       const settingsUid = window.roamAlphaAPI.data.q(
@@ -88,50 +83,26 @@
          :where 
          [?page :block/uid ?page-uid]
          [?settings :block/parents ?page]
-         [?settings :block/string "settings::"]
+         [?settings :block/string "**Settings:**"]
          [?settings :block/uid ?uid]]
       `,
         pageUid
       );
 
-      // Get features block UID
-      const featuresUid = window.roamAlphaAPI.data.q(
-        `
-        [:find ?uid .
-         :in $ ?page-uid
-         :where 
-         [?page :block/uid ?page-uid]
-         [?features :block/parents ?page]
-         [?features :block/string "features::"]
-         [?features :block/uid ?uid]]
-      `,
-        pageUid
-      );
-
-      // Add settings sub-blocks
+      // Add all settings in the correct order
       if (settingsUid) {
-        const settingsSubBlocks = ["auto-detect:: yes", "debug:: no"];
-
-        for (let i = 0; i < settingsSubBlocks.length; i++) {
-          await window.roamAlphaAPI.data.block.create({
-            location: { "parent-uid": settingsUid, order: i },
-            block: { string: settingsSubBlocks[i] },
-          });
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      }
-
-      // Add features sub-blocks (including new features)
-      if (featuresUid) {
-        const featuresSubBlocks = [
-          "add weekly intentions:: yes",
-          "add week count in year line:: yes",
+        const settingsBlocks = [
+          "automatic guidance enabled: yes",
+          "add week count within the year: yes",
+          "include query for `[[Morning Intentions]]`: yes",
+          "add query for `[[Evening Reflections]]`: yes",
+          "add Plus-Minus-Next journal: yes",
         ];
 
-        for (let i = 0; i < featuresSubBlocks.length; i++) {
+        for (let i = 0; i < settingsBlocks.length; i++) {
           await window.roamAlphaAPI.data.block.create({
-            location: { "parent-uid": featuresUid, order: i },
-            block: { string: featuresSubBlocks[i] },
+            location: { "parent-uid": settingsUid, order: i },
+            block: { string: settingsBlocks[i] },
           });
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
@@ -146,33 +117,39 @@
 
   async function loadConfig() {
     try {
-      // Use ConfigUtils to read configuration
+      // Use ConfigUtils to read configuration with new setting names
       const configPageTitle = "roam/ext/weekly view/config";
 
       const config = {
         settings: {
-          "auto-detect": CalendarUtilities.ConfigUtils.readConfigValue(
-            configPageTitle,
-            "auto-detect",
-            "yes"
-          ),
-          debug: CalendarUtilities.ConfigUtils.readConfigValue(
-            configPageTitle,
-            "debug",
-            "no"
-          ),
-        },
-        features: {
-          "add weekly intentions":
+          "automatic guidance enabled":
             CalendarUtilities.ConfigUtils.readConfigValue(
               configPageTitle,
-              "add weekly intentions",
+              "automatic guidance enabled",
               "yes"
             ),
-          "add week count in year line":
+          "add week count within the year":
             CalendarUtilities.ConfigUtils.readConfigValue(
               configPageTitle,
-              "add week count in year line",
+              "add week count within the year",
+              "yes"
+            ),
+          "include query for `[[Morning Intentions]]`":
+            CalendarUtilities.ConfigUtils.readConfigValue(
+              configPageTitle,
+              "include query for `[[Morning Intentions]]`",
+              "yes"
+            ),
+          "add query for `[[Evening Reflections]]`":
+            CalendarUtilities.ConfigUtils.readConfigValue(
+              configPageTitle,
+              "add query for `[[Evening Reflections]]`",
+              "yes"
+            ),
+          "add Plus-Minus-Next journal":
+            CalendarUtilities.ConfigUtils.readConfigValue(
+              configPageTitle,
+              "add Plus-Minus-Next journal",
               "yes"
             ),
         },
@@ -184,10 +161,12 @@
       console.error("❌ Error loading config:", error);
       // Return default config on error
       return {
-        settings: { "auto-detect": "yes", debug: "no" },
-        features: {
-          "add weekly intentions": "yes",
-          "add week count in year line": "yes",
+        settings: {
+          "automatic guidance enabled": "yes",
+          "add week count within the year": "yes",
+          "include query for `[[Morning Intentions]]`": "yes",
+          "add query for `[[Evening Reflections]]`": "yes",
+          "add Plus-Minus-Next journal": "yes",
         },
       };
     }
@@ -394,7 +373,7 @@
   }
 
   // ===================================================================
-  // 👁️ PAGE CHANGE DETECTION - Preserved legacy observer pattern
+  // 👁️ PAGE CHANGE DETECTION - Updated for new config structure
   // ===================================================================
 
   function setupPageDetection() {
@@ -446,9 +425,9 @@
     try {
       const config = await loadConfig();
 
-      // Only proceed if auto-detect is enabled
-      if (config.settings["auto-detect"] !== "yes") {
-        console.log("📅 Auto-detect disabled, removing button");
+      // Only proceed if automatic guidance is enabled
+      if (config.settings["automatic guidance enabled"] !== "yes") {
+        console.log("📅 Automatic guidance disabled, removing button");
         removeWeeklyButton();
         return;
       }
@@ -793,7 +772,7 @@
   }
 
   // ===================================================================
-  // 🚀 WEEKLY CONTENT CREATION - Enhanced with new features
+  // 🚀 WEEKLY CONTENT CREATION - Enhanced with redesigned features
   // ===================================================================
 
   async function createWeeklyContent(button) {
@@ -826,24 +805,21 @@
         throw new Error(`Could not find page UID for "${weeklyTitle}"`);
       }
 
-      // Load config for new features
+      // Load config for enabled features
       const config = await loadConfig();
-
       let order = 0;
 
-      // 🆕 MORNING INTENTIONS FIRST (at top using exact syntax)
-      await addMorningIntentionsQuery(pageUid, order, weeklyTitle);
-      order++;
-
-      // 🆕 NEW FEATURE: Add week count in year line (if enabled)
-      if (config.features["add week count in year line"] === "yes") {
+      // 1. Add week count within the year (if enabled)
+      if (config.settings["add week count within the year"] === "yes") {
         await addWeekCountInYearLine(pageUid, order, weeklyTitle);
         order++;
       }
 
-      // 🆕 NEW FEATURE: Add weekly intentions (if enabled)
-      if (config.features["add weekly intentions"] === "yes") {
-        await addWeeklyIntentions(pageUid, order, weeklyTitle);
+      // 2. Add morning intentions query (if enabled)
+      if (
+        config.settings["include query for `[[Morning Intentions]]`"] === "yes"
+      ) {
+        await addMorningIntentionsQuery(pageUid, order, weeklyTitle);
         order++;
       }
 
@@ -882,6 +858,21 @@
         block: { string: "---" },
       });
       await new Promise((resolve) => setTimeout(resolve, 100));
+      order++;
+
+      // 3. Add evening reflections query (if enabled) - AFTER EMBEDS
+      if (
+        config.settings["add query for `[[Evening Reflections]]`"] === "yes"
+      ) {
+        await addEveningReflectionsQuery(pageUid, order, weeklyTitle);
+        order++;
+      }
+
+      // 4. Add Plus-Minus-Next journal (if enabled) - LAST
+      if (config.settings["add Plus-Minus-Next journal"] === "yes") {
+        await addPlusMinusNextJournal(pageUid, order, weeklyTitle);
+        order++;
+      }
 
       // Update button to show success
       button.style.background =
@@ -921,8 +912,42 @@
   }
 
   // ===================================================================
-  // 🆕 NEW FEATURE FUNCTIONS
+  // 🆕 FEATURE FUNCTIONS - Redesigned & New Features
   // ===================================================================
+
+  async function addWeekCountInYearLine(pageUid, order, weeklyTitle) {
+    try {
+      const parsed = parseWeeklyTitle(weeklyTitle);
+      if (!parsed) {
+        throw new Error("Could not parse weekly title for week count");
+      }
+
+      const { startDate } = parsed;
+      const year = startDate.getFullYear();
+
+      // Calculate week number: find first Monday of the year
+      const firstMonday = getFirstMondayOfYear(year);
+      const weekNumber =
+        Math.floor(
+          (startDate.getTime() - firstMonday.getTime()) /
+            (7 * 24 * 60 * 60 * 1000)
+        ) + 1;
+
+      const weekCountText = `**This is the ${getOrdinal(
+        weekNumber
+      )} full week of ${year}**`;
+
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": pageUid, order: order },
+        block: { string: weekCountText },
+      });
+
+      console.log(`✅ Added week count line: "${weekCountText}"`);
+    } catch (error) {
+      console.error("❌ Error adding week count line:", error);
+      throw error;
+    }
+  }
 
   async function addMorningIntentionsQuery(pageUid, order, weeklyTitle) {
     try {
@@ -984,6 +1009,177 @@
     }
   }
 
+  // 🆕 NEW FEATURE: Evening Reflections Query
+  async function addEveningReflectionsQuery(pageUid, order, weeklyTitle) {
+    try {
+      const parsed = parseWeeklyTitle(weeklyTitle);
+      if (!parsed) {
+        throw new Error(
+          "Could not parse weekly title for evening reflections query"
+        );
+      }
+
+      const { startDate, endDate } = parsed;
+
+      // Format dates exactly like morning intentions
+      const startDateFormatted = formatDateWithOrdinal(startDate);
+      const endDateFormatted = formatDateWithOrdinal(endDate);
+
+      // Create the exact syntax - same as morning but for evening
+      const eveningReflectionsText = "**Evening reflections this week:**";
+      const queryText = `{{[[query]]: {and: [[Evening Reflections]] {between: [[${startDateFormatted}]] [[${endDateFormatted}]]}}}}`;
+
+      // Create main block
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": pageUid, order: order },
+        block: { string: eveningReflectionsText },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Get the main block UID
+      const mainBlockUid = window.roamAlphaAPI.data.q(
+        `
+        [:find ?uid .
+         :in $ ?page-uid ?text
+         :where 
+         [?page :block/uid ?page-uid]
+         [?block :block/parents ?page]
+         [?block :block/string ?text]
+         [?block :block/uid ?uid]]
+      `,
+        pageUid,
+        eveningReflectionsText
+      );
+
+      if (!mainBlockUid) {
+        throw new Error("Could not find evening reflections main block UID");
+      }
+
+      // Add query as child block
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": mainBlockUid, order: 0 },
+        block: { string: queryText },
+      });
+
+      console.log(
+        `✅ Added evening reflections query: "${eveningReflectionsText}"`
+      );
+    } catch (error) {
+      console.error("❌ Error adding evening reflections query:", error);
+      throw error;
+    }
+  }
+
+  // 🆕 NEW FEATURE: Plus-Minus-Next Journal
+  async function addPlusMinusNextJournal(pageUid, order, weeklyTitle) {
+    try {
+      // Create the exact structure as shown in the image
+      const summaryText = "**Summary (end-of-week [[P.M.N.]]):**";
+
+      // Create main summary block
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": pageUid, order: order },
+        block: { string: summaryText },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Get the summary block UID
+      const summaryBlockUid = window.roamAlphaAPI.data.q(
+        `
+        [:find ?uid .
+         :in $ ?page-uid ?text
+         :where 
+         [?page :block/uid ?page-uid]
+         [?block :block/parents ?page]
+         [?block :block/string ?text]
+         [?block :block/uid ?uid]]
+      `,
+        pageUid,
+        summaryText
+      );
+
+      if (!summaryBlockUid) {
+        throw new Error("Could not find summary block UID");
+      }
+
+      // Add the Plus-Minus-Next structure with the exact instruction text
+      const pmnText =
+        "Plus-Minus-Next ((hit ctrl-shift-v, then select h, for horizontal view))";
+
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": summaryBlockUid, order: 0 },
+        block: { string: pmnText },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Get the PMN block UID
+      const pmnBlockUid = window.roamAlphaAPI.data.q(
+        `
+        [:find ?uid .
+         :in $ ?parent-uid ?text
+         :where 
+         [?parent :block/uid ?parent-uid]
+         [?block :block/parents ?parent]
+         [?block :block/string ?text]
+         [?block :block/uid ?uid]]
+      `,
+        summaryBlockUid,
+        pmnText
+      );
+
+      if (!pmnBlockUid) {
+        throw new Error("Could not find PMN block UID");
+      }
+
+      // Add PLUS, MINUS, and NEXT sections
+      const sections = ["PLUS", "MINUS", "NEXT"];
+
+      for (let i = 0; i < sections.length; i++) {
+        const sectionText = sections[i];
+
+        // Create section header
+        await window.roamAlphaAPI.data.block.create({
+          location: { "parent-uid": pmnBlockUid, order: i },
+          block: { string: sectionText },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Get the section block UID
+        const sectionUid = window.roamAlphaAPI.data.q(
+          `
+          [:find ?uid .
+           :in $ ?parent-uid ?section-text
+           :where 
+           [?parent :block/uid ?parent-uid]
+           [?section :block/parents ?parent]
+           [?section :block/string ?section-text]
+           [?section :block/uid ?uid]]
+        `,
+          pmnBlockUid,
+          sectionText
+        );
+
+        if (sectionUid) {
+          // Add the "1." starter item under each section
+          await window.roamAlphaAPI.data.block.create({
+            location: { "parent-uid": sectionUid, order: 0 },
+            block: { string: "1." },
+          });
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      console.log(`✅ Added Plus-Minus-Next journal structure`);
+    } catch (error) {
+      console.error("❌ Error adding Plus-Minus-Next journal:", error);
+      throw error;
+    }
+  }
+
+  // ===================================================================
+  // 🔧 HELPER FUNCTIONS
+  // ===================================================================
+
   // Helper function to format date with ordinal (June 16th, 2025)
   function formatDateWithOrdinal(date) {
     const monthName = CalendarUtilities.DateTimeUtils.getMonthName(
@@ -993,40 +1189,6 @@
     const year = date.getFullYear();
     const ordinalDay = getOrdinal(day);
     return `${monthName} ${ordinalDay}, ${year}`;
-  }
-
-  async function addWeekCountInYearLine(pageUid, order, weeklyTitle) {
-    try {
-      const parsed = parseWeeklyTitle(weeklyTitle);
-      if (!parsed) {
-        throw new Error("Could not parse weekly title for week count");
-      }
-
-      const { startDate } = parsed;
-      const year = startDate.getFullYear();
-
-      // Calculate week number: find first Monday of the year
-      const firstMonday = getFirstMondayOfYear(year);
-      const weekNumber =
-        Math.floor(
-          (startDate.getTime() - firstMonday.getTime()) /
-            (7 * 24 * 60 * 60 * 1000)
-        ) + 1;
-
-      const weekCountText = `**This is the ${getOrdinal(
-        weekNumber
-      )} full week of ${year} **`;
-
-      await window.roamAlphaAPI.data.block.create({
-        location: { "parent-uid": pageUid, order: order },
-        block: { string: weekCountText },
-      });
-
-      console.log(`✅ Added week count line: "${weekCountText}"`);
-    } catch (error) {
-      console.error("❌ Error adding week count line:", error);
-      throw error;
-    }
   }
 
   // Helper function to get first Monday of the year
@@ -1049,37 +1211,6 @@
 
     const firstMonday = new Date(year, 0, 1 + daysToMonday);
     return firstMonday;
-  }
-
-  async function addWeeklyIntentions(pageUid, order, weeklyTitle) {
-    try {
-      const parsed = parseWeeklyTitle(weeklyTitle);
-      if (!parsed) {
-        throw new Error("Could not parse weekly title for weekly intentions");
-      }
-
-      const { startDate } = parsed;
-
-      // Format the Monday date
-      const monthName = CalendarUtilities.DateTimeUtils.getMonthName(
-        startDate.getMonth()
-      );
-      const day = startDate.getDate();
-      const year = startDate.getFullYear();
-      const ordinalDay = getOrdinal(day);
-
-      const intentionsText = `Weekly Intention:: (indent your intentions for the week below)`;
-
-      await window.roamAlphaAPI.data.block.create({
-        location: { "parent-uid": pageUid, order: order },
-        block: { string: intentionsText },
-      });
-
-      console.log(`✅ Added weekly intentions: "${intentionsText}"`);
-    } catch (error) {
-      console.error("❌ Error adding weekly intentions:", error);
-      throw error;
-    }
   }
 
   function getOrdinal(number) {
@@ -1188,83 +1319,6 @@
   }
 
   // ===================================================================
-  // 📝 MORNING INTENTIONS - Preserved legacy structure
-  // ===================================================================
-
-  async function addMorningIntentionsSection(pageUid, order, weeklyTitle) {
-    // Parse the weekly title to get start and end dates
-    const parsed = parseWeeklyTitle(weeklyTitle);
-    if (!parsed) {
-      console.error("❌ Could not parse weekly title for morning intentions");
-      return;
-    }
-
-    const { startDate, endDate } = parsed;
-
-    // Format dates for Roam daily note format
-    const startDateStr =
-      CalendarUtilities.DateTimeUtils.formatDateForRoam(startDate);
-    const endDateStr =
-      CalendarUtilities.DateTimeUtils.formatDateForRoam(endDate);
-
-    console.log(
-      `📅 Creating morning intentions section for range: ${startDateStr} to ${endDateStr}`
-    );
-
-    // Create Morning Intentions section header
-    await window.roamAlphaAPI.data.block.create({
-      location: { "parent-uid": pageUid, order: order },
-      block: { string: "**Morning Intentions:**" },
-    });
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Get the Morning Intentions block UID for adding children
-    const morningIntentionsUid = window.roamAlphaAPI.data.q(
-      `
-      [:find ?uid .
-       :in $ ?page-uid
-       :where 
-       [?page :block/uid ?page-uid]
-       [?block :block/parents ?page]
-       [?block :block/string "**Morning Intentions:**"]
-       [?block :block/uid ?uid]]
-    `,
-      pageUid
-    );
-
-    if (!morningIntentionsUid) {
-      console.error("❌ Could not find Morning Intentions block UID");
-      return;
-    }
-
-    // Add date range links
-    await window.roamAlphaAPI.data.block.create({
-      location: { "parent-uid": morningIntentionsUid, order: 0 },
-      block: { string: `[[${startDateStr}]]` },
-    });
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    await window.roamAlphaAPI.data.block.create({
-      location: { "parent-uid": morningIntentionsUid, order: 1 },
-      block: { string: "" },
-    });
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    await window.roamAlphaAPI.data.block.create({
-      location: { "parent-uid": morningIntentionsUid, order: 2 },
-      block: { string: `[[${endDateStr}]]` },
-    });
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    await window.roamAlphaAPI.data.block.create({
-      location: { "parent-uid": morningIntentionsUid, order: 3 },
-      block: { string: "- 1." },
-    });
-
-    console.log("✅ Morning intentions section created successfully");
-  }
-
-  // ===================================================================
   // 🧹 CLEANUP FUNCTIONS
   // ===================================================================
 
@@ -1298,7 +1352,7 @@
 
   const WeeklyViewExtension = {
     onload: async ({ extensionAPI }) => {
-      console.log("📅 Weekly View Extension v2.0 loading...");
+      console.log("📅 Weekly View Extension v2.1 loading...");
 
       // Wait for Calendar Utilities to be available
       let attempts = 0;
@@ -1337,18 +1391,21 @@
             isWeeklyPage,
             parseWeeklyTitle,
             getRequiredMonthlyPages,
-            version: "2.0.0",
+            version: "2.1.0",
           },
           {
             name: "Weekly View",
             description:
               "Auto-detects weekly calendar pages and offers to populate with monthly calendar embeds",
-            version: "2.0.0",
+            version: "2.1.0",
             dependencies: ["calendar-foundation", "calendar-utilities"],
             provides: [
               "weekly-view-creation",
               "weekly-page-detection",
               "monthly-dependency-checking",
+              "morning-intentions-query",
+              "evening-reflections-query",
+              "plus-minus-next-journal",
             ],
           }
         );
@@ -1356,12 +1413,12 @@
         console.log("🔗 Weekly View Extension registered with Calendar Suite");
       }
 
-      console.log("✅ Weekly View Extension v2.0 loaded successfully!");
+      console.log("✅ Weekly View Extension v2.1 loaded successfully!");
     },
 
     onunload: () => {
       cleanup();
-      console.log("👋 Weekly View Extension v2.0 unloaded");
+      console.log("👋 Weekly View Extension v2.1 unloaded");
     },
   };
 
