@@ -1,53 +1,60 @@
 // ===================================================================
-// 📅 MONTHLY VIEW EXTENSION v2.0 - Professional Rebuild (Monday Weeks)
+// 📅 MONTHLY VIEW EXTENSION v2.1.1 - Clean Unified Config + FIXED Color Keys
 // Auto-detects monthly pages and offers to populate with numbered week calendars
-// Built on Calendar Foundation + Calendar Utilities architecture
+// Built on Calendar Foundation + Unified Config architecture
+// FIXED: Uses flat config keys (color-mon, color-tue) instead of hierarchical (colors.mon)
 // ===================================================================
 
 export default {
   onload: ({ extensionAPI }) => {
-    console.log("📅 Monthly View Extension v2.0 loading...");
+    console.log(
+      "📅 Monthly View Extension v2.1.1 loading (Fixed Color Keys)..."
+    );
 
-    // 🔧 VERIFY DEPENDENCIES
+    // 🔧 VERIFY DEPENDENCIES - Hard requirements (no fallbacks!)
     if (!window.CalendarSuite) {
-      console.error(
-        "❌ Calendar Foundation not found! Please load Calendar Foundation first."
+      throw new Error(
+        "❌ Calendar Foundation required! Please load Calendar Foundation first."
       );
-      return;
     }
 
     if (!window.CalendarUtilities) {
-      console.error(
-        "❌ Calendar Utilities not found! Please load Calendar Utilities first."
+      throw new Error(
+        "❌ Calendar Utilities required! Please load Calendar Utilities first."
       );
-      return;
+    }
+
+    if (!window.UnifiedConfigUtils) {
+      throw new Error(
+        "❌ Unified Config Utils required! Please load Unified Config Utils first."
+      );
     }
 
     // 🌳 INITIALIZE EXTENSION
     initializeMonthlyView();
 
-    console.log("✅ Monthly View Extension v2.0 loaded!");
+    console.log("✅ Monthly View Extension v2.1.1 loaded (Fixed Color Keys)!");
   },
 
   onunload: () => {
-    console.log("📅 Monthly View Extension v2.0 unloading...");
+    console.log("📅 Monthly View Extension v2.1.1 unloading...");
 
     // Clean up any floating buttons
     removeMonthlyButton();
 
     // The Calendar Foundation will handle automatic cleanup
-    console.log("✅ Monthly View Extension v2.0 unloaded!");
+    console.log("✅ Monthly View Extension v2.1.1 unloaded!");
   },
 };
 
 // ===================================================================
-// 🌳 1.0 CONFIGURATION MANAGEMENT - Professional Settings
+// 🌳 1.0 INITIALIZATION - Clean Modern Setup
 // ===================================================================
 
 async function initializeMonthlyView() {
   try {
-    // 📋 Initialize configuration with new naming convention
-    await initializeConfig();
+    // 📋 Initialize unified configuration
+    await initializeUnifiedConfig();
 
     // 🌺 Set up page detection
     setupPageDetection();
@@ -62,56 +69,11 @@ async function initializeMonthlyView() {
   }
 }
 
-async function initializeConfig() {
+async function initializeUnifiedConfig() {
   try {
-    // 🔧 Check if config exists with new naming convention
-    const configExists = window.CalendarUtilities.RoamUtils.pageExists(
-      "roam/ext/monthly view/config"
-    );
+    console.log("📋 Initializing MonthlyView unified config...");
 
-    if (!configExists) {
-      console.log("📋 Creating default Monthly View config...");
-      await createDefaultConfig();
-    } else {
-      console.log("📋 Monthly View config found");
-    }
-  } catch (error) {
-    console.error("❌ Error initializing config:", error);
-  }
-}
-
-async function createDefaultConfig() {
-  try {
-    // 📝 Create config page with sections using utility
-    await window.CalendarUtilities.ConfigUtils.createDefaultConfig(
-      "roam/ext/monthly view/config",
-      ["colors::", "settings::"]
-    );
-
-    // ⏱️ Wait for page creation
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // 🏗️ Get the page UID
-    const pageUid = window.CalendarUtilities.RoamUtils.getPageUid(
-      "roam/ext/monthly view/config"
-    );
-    if (!pageUid) throw new Error("Could not find created config page");
-
-    // 🌈 Add default color configuration
-    await addDefaultColors(pageUid);
-
-    // ⚙️ Add default settings
-    await addDefaultSettings(pageUid);
-
-    console.log("✅ Default config created successfully");
-  } catch (error) {
-    console.error("❌ Error creating default config:", error);
-  }
-}
-
-async function addDefaultColors(pageUid) {
-  try {
-    // 🎨 Default day colors (matching legacy)
+    // 🎨 Set up default colors in unified config (FIXED: Use flat keys)
     const defaultColors = {
       mon: "#clr-lgt-grn",
       tue: "#clr-lgt-grn",
@@ -122,72 +84,46 @@ async function addDefaultColors(pageUid) {
       sun: "#clr-lgt-brn",
     };
 
-    // 🔍 Find colors section UID
-    const colorsUid = await findConfigSectionUid(pageUid, "colors::");
-    if (!colorsUid) return;
-
-    // 📝 Add color blocks
-    let order = 0;
-    for (const [day, color] of Object.entries(defaultColors)) {
-      await window.CalendarUtilities.RoamUtils.createBlock(
-        colorsUid,
-        `${day}:: ${color}`,
-        order++
-      );
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-  } catch (error) {
-    console.error("❌ Error adding default colors:", error);
-  }
-}
-
-async function addDefaultSettings(pageUid) {
-  try {
-    // ⚙️ Default settings (matching legacy)
+    // ⚙️ Set up default settings in unified config
     const defaultSettings = {
       "auto-detect": "yes",
       "show-monthly-todo": "yes",
     };
 
-    // 🔍 Find settings section UID
-    const settingsUid = await findConfigSectionUid(pageUid, "settings::");
-    if (!settingsUid) return;
-
-    // 📝 Add setting blocks
-    let order = 0;
-    for (const [setting, value] of Object.entries(defaultSettings)) {
-      await window.CalendarUtilities.RoamUtils.createBlock(
-        settingsUid,
-        `${setting}:: ${value}`,
-        order++
+    // 🏗️ Initialize MonthlyView section with defaults (FIXED: Use flat keys like "color-mon")
+    for (const [day, color] of Object.entries(defaultColors)) {
+      const existing = window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        `color-${day}`,
+        null
       );
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      if (!existing) {
+        await window.CalendarUtilities.ConfigUtils.writeToSection(
+          "MonthlyView",
+          `color-${day}`,
+          color
+        );
+      }
     }
-  } catch (error) {
-    console.error("❌ Error adding default settings:", error);
-  }
-}
 
-async function findConfigSectionUid(pageUid, sectionTitle) {
-  try {
-    const result = window.roamAlphaAPI.data.q(
-      `
-      [:find ?uid .
-       :in $ ?parent-uid ?section-title
-       :where
-       [?parent :block/uid ?parent-uid]
-       [?parent :block/children ?child]
-       [?child :block/string ?section-title]
-       [?child :block/uid ?uid]]
-    `,
-      pageUid,
-      sectionTitle
-    );
+    for (const [setting, value] of Object.entries(defaultSettings)) {
+      const existing = window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        `setting-${setting}`,
+        null
+      );
+      if (!existing) {
+        await window.CalendarUtilities.ConfigUtils.writeToSection(
+          "MonthlyView",
+          `setting-${setting}`,
+          value
+        );
+      }
+    }
 
-    return result || null;
+    console.log("✅ MonthlyView unified config initialized with flat keys");
   } catch (error) {
-    console.error(`❌ Error finding section ${sectionTitle}:`, error);
-    return null;
+    console.error("❌ Error initializing unified config:", error);
   }
 }
 
@@ -238,7 +174,7 @@ function setupPageDetection() {
 
 async function checkCurrentPage() {
   try {
-    // 🔍 Get current page title using improved utilities (now with robust legacy patterns)
+    // 🔍 Get current page title
     const pageTitle = window.CalendarUtilities.RoamUtils.getCurrentPageTitle();
 
     if (!pageTitle) {
@@ -249,12 +185,12 @@ async function checkCurrentPage() {
 
     console.log(`📍 Checking page: "${pageTitle}"`);
 
-    // 📅 Check if this is a monthly page using utilities
+    // 📅 Check if this is a monthly page
     if (window.CalendarUtilities.MonthlyUtils.isMonthlyPage(pageTitle)) {
       console.log("📅 Monthly page detected!");
 
-      // 📋 Load configuration
-      const config = await loadConfig();
+      // 📋 Load configuration from unified config
+      const config = await loadUnifiedConfig();
 
       // ✅ Check if auto-detect is enabled
       if (config.settings["auto-detect"] === "yes") {
@@ -283,63 +219,68 @@ async function checkCurrentPage() {
   }
 }
 
-async function loadConfig() {
+async function loadUnifiedConfig() {
   try {
-    // 🎨 Default colors
-    const defaultColors = {
-      mon: "#clr-lgt-grn",
-      tue: "#clr-lgt-grn",
-      wed: "#clr-grn",
-      thu: "#clr-lgt-grn",
-      fri: "#clr-lgt-grn",
-      sat: "#clr-lgt-ylo",
-      sun: "#clr-lgt-brn",
+    // 🎨 Load colors from unified config (FIXED: Use flat keys)
+    const colors = {
+      mon: window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "color-mon",
+        "#clr-lgt-grn"
+      ),
+      tue: window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "color-tue",
+        "#clr-lgt-grn"
+      ),
+      wed: window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "color-wed",
+        "#clr-grn"
+      ),
+      thu: window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "color-thu",
+        "#clr-lgt-grn"
+      ),
+      fri: window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "color-fri",
+        "#clr-lgt-grn"
+      ),
+      sat: window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "color-sat",
+        "#clr-lgt-ylo"
+      ),
+      sun: window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "color-sun",
+        "#clr-lgt-brn"
+      ),
     };
 
-    // ⚙️ Default settings
-    const defaultSettings = {
-      "auto-detect": "yes",
-      "show-monthly-todo": "yes",
+    // ⚙️ Load settings from unified config (FIXED: Use flat keys)
+    const settings = {
+      "auto-detect": window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "setting-auto-detect",
+        "yes"
+      ),
+      "show-monthly-todo": window.CalendarUtilities.ConfigUtils.readFromSection(
+        "MonthlyView",
+        "setting-show-monthly-todo",
+        "yes"
+      ),
     };
 
-    const colors = {};
-    const settings = {};
-
-    // 🔍 Load colors individually using utilities
-    for (const day of Object.keys(defaultColors)) {
-      try {
-        const colorValue = window.CalendarUtilities.ConfigUtils.readConfigValue(
-          "roam/ext/monthly view/config",
-          `${day}::`,
-          defaultColors[day]
-        );
-        colors[day] = colorValue;
-      } catch (e) {
-        console.log(`Using default color for ${day}:`, e.message);
-        colors[day] = defaultColors[day];
-      }
-    }
-
-    // ⚙️ Load settings individually using utilities
-    for (const setting of Object.keys(defaultSettings)) {
-      try {
-        const settingValue =
-          window.CalendarUtilities.ConfigUtils.readConfigValue(
-            "roam/ext/monthly view/config",
-            `${setting}::`,
-            defaultSettings[setting]
-          );
-        settings[setting] = settingValue;
-      } catch (e) {
-        console.log(`Using default setting for ${setting}:`, e.message);
-        settings[setting] = defaultSettings[setting];
-      }
-    }
-
-    console.log("📋 Config loaded:", { colors, settings });
+    console.log("📋 Unified config loaded with flat keys:", {
+      colors,
+      settings,
+    });
     return { colors, settings };
   } catch (error) {
-    console.error("❌ Error loading config:", error);
+    console.error("❌ Error loading unified config:", error);
     // 🔄 Return defaults if loading fails
     return {
       colors: {
@@ -351,32 +292,23 @@ async function loadConfig() {
         sat: "#clr-lgt-ylo",
         sun: "#clr-lgt-brn",
       },
-      settings: {
-        "auto-detect": "yes",
-        "show-monthly-todo": "yes",
-      },
+      settings: { "auto-detect": "yes", "show-monthly-todo": "yes" },
     };
   }
 }
 
 async function checkForExistingWeekContent(monthlyTitle) {
   try {
-    // 🔧 FIXED: Use proven legacy pattern - simple page emptiness check
+    // 📄 Simple page emptiness check
     const pageUid = window.CalendarUtilities.RoamUtils.getPageUid(monthlyTitle);
     if (!pageUid) {
       console.log(`📄 Page "${monthlyTitle}" doesn't exist - no content`);
-      return false; // Page doesn't exist = no content
+      return false;
     }
 
-    // Check if page has any child blocks at all
+    // Check if page has any child blocks
     const hasChildren = window.roamAlphaAPI.data.q(
-      `
-      [:find ?child .
-       :in $ ?page-uid
-       :where
-       [?page :block/uid ?page-uid]
-       [?page :block/children ?child]]
-    `,
+      `[:find ?child . :in $ ?page-uid :where [?page :block/uid ?page-uid] [?page :block/children ?child]]`,
       pageUid
     );
 
@@ -401,7 +333,7 @@ function showMonthlyButton(pageTitle, config) {
   const button = document.createElement("div");
   button.id = "monthly-view-button";
 
-  // 💎 Button styles (matching legacy styling)
+  // 💎 Button styles
   const buttonStyles = `
     position: fixed;
     top: 60px;
@@ -597,10 +529,6 @@ function getWeekStartMonday(date) {
   const dayOfWeek = result.getDay();
 
   // 🎯 Calculate how many days to subtract to get to Monday
-  // Sunday (0) -> subtract 6 days
-  // Monday (1) -> subtract 0 days
-  // Tuesday (2) -> subtract 1 day
-  // etc.
   const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 
   // 📅 Move to the Monday
@@ -632,7 +560,7 @@ async function createMonthlyCalendar(monthlyTitle, config) {
     await addMonthNavigation(pageUid, parsed);
 
     // 📋 Add monthly todo section right after navigation (if enabled)
-    let currentOrder = 3; // Start after nav blocks (now includes yearly view)
+    let currentOrder = 3; // Start after nav blocks (includes yearly view)
     if (config.settings["show-monthly-todo"] === "yes") {
       console.log("📋 Adding monthly todo section...");
       await addMonthlyTodoSection(pageUid, currentOrder, parsed);
@@ -663,15 +591,7 @@ async function createMonthlyCalendar(monthlyTitle, config) {
 
       // 🔍 Get the UID of the week header block we just created
       const weekHeaderUid = window.roamAlphaAPI.data.q(
-        `
-        [:find ?uid .
-         :in $ ?page-uid ?header-text
-         :where
-         [?page :block/uid ?page-uid]
-         [?page :block/children ?block]
-         [?block :block/string ?header-text]
-         [?block :block/uid ?uid]]
-      `,
+        `[:find ?uid . :in $ ?page-uid ?header-text :where [?page :block/uid ?page-uid] [?page :block/children ?block] [?block :block/string ?header-text] [?block :block/uid ?uid]]`,
         pageUid,
         weekHeader
       );
@@ -698,23 +618,22 @@ async function createMondayDayBlocks(weekHeaderUid, week, config, monthInfo) {
 
     // 📅 Monday-first day mapping
     const dayMapping = {
-      0: "mon", // Monday = 0 in our system
-      1: "tue", // Tuesday = 1
-      2: "wed", // Wednesday = 2
-      3: "thu", // Thursday = 3
-      4: "fri", // Friday = 4
-      5: "sat", // Saturday = 5
-      6: "sun", // Sunday = 6
+      0: "mon",
+      1: "tue",
+      2: "wed",
+      3: "thu",
+      4: "fri",
+      5: "sat",
+      6: "sun",
     };
-
     const dayAbbrevMapping = {
-      0: "Mo", // Monday = 0
-      1: "Tu", // Tuesday = 1
-      2: "We", // Wednesday = 2
-      3: "Th", // Thursday = 3
-      4: "Fr", // Friday = 4
-      5: "Sa", // Saturday = 5
-      6: "Su", // Sunday = 6
+      0: "Mo",
+      1: "Tu",
+      2: "We",
+      3: "Th",
+      4: "Fr",
+      5: "Sa",
+      6: "Su",
     };
 
     let dayOrder = 0;
@@ -766,12 +685,12 @@ async function addMonthNavigation(pageUid, monthInfo) {
     const nextMonthTitle =
       window.CalendarUtilities.MonthlyUtils.generateMonthlyTitle(nextMonth);
 
-    // 📝 Create navigation blocks with text instead of arrows
+    // 📝 Create navigation blocks
     const prevNavBlock = `Last month: [[${prevMonthTitle}]]`;
     const nextNavBlock = `Next month: [[${nextMonthTitle}]]`;
     const yearNavBlock = `Yearly view: [[${monthInfo.year}]]`;
 
-    // Add previous month navigation
+    // Add navigation
     await window.CalendarUtilities.RoamUtils.createBlock(
       pageUid,
       prevNavBlock,
@@ -779,7 +698,6 @@ async function addMonthNavigation(pageUid, monthInfo) {
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Add next month navigation
     await window.CalendarUtilities.RoamUtils.createBlock(
       pageUid,
       nextNavBlock,
@@ -787,7 +705,6 @@ async function addMonthNavigation(pageUid, monthInfo) {
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Add yearly view navigation
     await window.CalendarUtilities.RoamUtils.createBlock(
       pageUid,
       yearNavBlock,
@@ -803,12 +720,12 @@ async function addMonthNavigation(pageUid, monthInfo) {
 
 async function addMonthlyTodoSection(pageUid, order, monthInfo) {
   try {
-    console.log(`📋 Creating simple monthly todo at order ${order}`);
+    console.log(`📋 Creating monthly todo at order ${order}`);
 
-    // 📋 Create simple monthly todo block exactly like legacy
+    // 📋 Create monthly todo block
     const todoBlock = `#lin-abv #lin-blw {{[[TODO]]}}  Monthly Tasks Completed for ${monthInfo.monthName}`;
 
-    // Create single todo block
+    // Create todo block
     await window.CalendarUtilities.RoamUtils.createBlock(
       pageUid,
       todoBlock,
@@ -816,7 +733,7 @@ async function addMonthlyTodoSection(pageUid, order, monthInfo) {
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    console.log(`📋 Created legacy-style todo: ${todoBlock}`);
+    console.log(`📋 Created todo: ${todoBlock}`);
     console.log("✅ Monthly todo section added successfully");
   } catch (error) {
     console.error("❌ Error adding monthly todo section:", error);
@@ -824,37 +741,42 @@ async function addMonthlyTodoSection(pageUid, order, monthInfo) {
 }
 
 // ===================================================================
-// 🌐 5.0 PLATFORM REGISTRATION - Professional Integration
+// 🌐 5.0 PLATFORM REGISTRATION - Modern Integration
 // ===================================================================
 
 function registerWithPlatform() {
   try {
     // 🎯 Register with Calendar Foundation
     window.CalendarSuite.register(
-      "monthly-view-v2",
+      "monthly-view-v2.1",
       {
         // 🔧 Extension API
         checkCurrentPage,
-        loadConfig,
+        loadUnifiedConfig,
         createMonthlyCalendar,
         showMonthlyButton,
         removeMonthlyButton,
         getMondayWeeksInMonth,
-        version: "2.0.0",
+        version: "2.1.1",
       },
       {
         // 📋 Extension metadata
-        name: "Monthly View v2.0 (Monday Weeks)",
+        name: "Monthly View v2.1 (Clean Unified)",
         description:
-          "Auto-detects monthly pages and populates with Monday-based weekly calendars",
-        version: "2.0.0",
-        dependencies: ["calendar-foundation", "calendar-utilities"],
+          "Auto-detects monthly pages and populates with Monday-based weekly calendars using unified config",
+        version: "2.1.0",
+        dependencies: [
+          "calendar-foundation",
+          "calendar-utilities",
+          "unified-config-utils",
+        ],
         provides: [
           "monday-week-detection",
           "monday-weekly-calendar-generation",
           "monthly-todo-management",
+          "unified-config-integration",
         ],
-        configPage: "roam/ext/monthly view/config",
+        configSection: "MonthlyView",
       }
     );
 
@@ -868,20 +790,47 @@ function registerWithPlatform() {
         },
       },
       {
-        label: "Monthly View: Show Config",
+        label: "Monthly View: Show Unified Config",
         callback: () => {
-          const configPage = "roam/ext/monthly view/config";
           window.roamAlphaAPI.ui.mainWindow.openPage({
-            page: { title: configPage },
+            page: { title: "roam/js/unified-config" },
           });
         },
       },
       {
-        label: "Monthly View: Reload Config",
+        label: "Monthly View: Reload Unified Config",
         callback: async () => {
-          console.log("🔄 Reloading configuration...");
-          const config = await loadConfig();
-          console.log("📋 Config reloaded:", config);
+          console.log("🔄 Reloading unified configuration...");
+          const config = await loadUnifiedConfig();
+          console.log("📋 Unified config reloaded:", config);
+        },
+      },
+      {
+        label: "Monthly View: Test Config Integration",
+        callback: async () => {
+          console.log("🧪 Testing unified config integration...");
+
+          // Test read
+          const mondayColor =
+            window.CalendarUtilities.ConfigUtils.readFromSection(
+              "MonthlyView",
+              "colors.mon",
+              "not-found"
+            );
+          console.log(`📖 Monday color: ${mondayColor}`);
+
+          // Test write
+          await window.CalendarUtilities.ConfigUtils.writeToSection(
+            "MonthlyView",
+            "test.timestamp",
+            new Date().toISOString()
+          );
+          console.log("📝 Test write completed");
+
+          // Show config status
+          const configStatus =
+            window.CalendarUtilities.ConfigUtils.getConfigStatus();
+          console.log("🎯 Config system status:", configStatus);
         },
       },
     ];
@@ -895,7 +844,7 @@ function registerWithPlatform() {
     });
 
     console.log(
-      "🌐 Monthly View v2.0 (Monday Weeks) registered with Calendar Foundation"
+      "🌐 Monthly View v2.1.1 (Fixed Color Keys) registered with Calendar Foundation"
     );
   } catch (error) {
     console.error("❌ Error registering with platform:", error);

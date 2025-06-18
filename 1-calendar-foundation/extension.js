@@ -1,6 +1,7 @@
 // ===================================================================
 // Calendar Foundation - Professional Architecture & Coordination
 // Manages lifecycle, dependencies, and communication for calendar suite
+// TRIMMED VERSION - Config management now handled by UnifiedConfigUtils
 // ===================================================================
 
 // ===================================================================
@@ -137,11 +138,10 @@ const createCalendarPlatform = () => {
     utilities: new Map(),
     eventBus: new Map(),
 
-    // 🗓️ CALENDAR-SPECIFIC STATE
+    // 🗓️ CALENDAR-SPECIFIC STATE (Config management removed - handled by UnifiedConfigUtils)
     calendarState: {
       currentView: null, // "monthly" | "weekly" | "yearly"
       currentPeriod: null, // "January 2024" | "01/15 2024 - 01/21 2024"
-      sharedConfig: new Map(), // Cross-extension configuration
       viewInstances: new Map(), // Active view instances
     },
 
@@ -162,11 +162,6 @@ const createCalendarPlatform = () => {
           ...metadata,
         },
       });
-
-      // 🔧 SYNC TO REGISTRY
-      if (window._calendarRegistry?.extensions) {
-        window._calendarRegistry.extensions.set(id, api);
-      }
 
       // 🔗 REGISTER DEPENDENCIES
       if (metadata.dependencies && metadata.dependencies.length > 0) {
@@ -198,27 +193,18 @@ const createCalendarPlatform = () => {
       return platform.extensions.has(id);
     },
 
-    // 🔧 UTILITY SHARING
+    // 🔧 UTILITY SHARING (Simplified - no complex registry sync)
     registerUtility: (name, utility) => {
       platform.utilities.set(name, utility);
-
-      // 🔧 SYNC TO REGISTRY
-      if (window._calendarRegistry?.utilities) {
-        window._calendarRegistry.utilities[name] = utility;
-      }
-
       console.log(`🔧 Calendar utility registered: ${name}`);
       return true;
     },
 
     getUtility: (name) => {
-      return (
-        platform.utilities.get(name) ||
-        window._calendarRegistry?.utilities?.[name]
-      );
+      return platform.utilities.get(name);
     },
 
-    // 🗓️ CALENDAR STATE MANAGEMENT
+    // 🗓️ CALENDAR STATE MANAGEMENT (Config removed - use UnifiedConfigUtils instead)
     setCurrentView: (viewType, period) => {
       const oldView = platform.calendarState.currentView;
       const oldPeriod = platform.calendarState.currentPeriod;
@@ -244,16 +230,6 @@ const createCalendarPlatform = () => {
         view: platform.calendarState.currentView,
         period: platform.calendarState.currentPeriod,
       };
-    },
-
-    // 🔧 SHARED CONFIGURATION
-    setSharedConfig: (key, value) => {
-      platform.calendarState.sharedConfig.set(key, value);
-      platform.emit("config:changed", { key, value });
-    },
-
-    getSharedConfig: (key, defaultValue = null) => {
-      return platform.calendarState.sharedConfig.get(key) || defaultValue;
     },
 
     // 📡 EVENT BUS
@@ -307,7 +283,7 @@ const createCalendarPlatform = () => {
       };
     },
 
-    // 📊 STATUS AND DEBUG
+    // 📊 STATUS AND DEBUG (Simplified - config info removed)
     getStatus: () => {
       return {
         extensions: Array.from(platform.extensions.keys()),
@@ -317,9 +293,6 @@ const createCalendarPlatform = () => {
         calendarState: {
           currentView: platform.calendarState.currentView,
           currentPeriod: platform.calendarState.currentPeriod,
-          sharedConfigKeys: Array.from(
-            platform.calendarState.sharedConfig.keys()
-          ),
           viewInstances: Array.from(
             platform.calendarState.viewInstances.keys()
           ),
@@ -333,37 +306,22 @@ const createCalendarPlatform = () => {
       console.group("🗓️ Calendar Suite Status");
       console.log("Platform:", platform.getStatus());
 
-      // Calendar-specific debug info
+      // Calendar-specific debug info (config removed)
       const calendarState = platform.calendarState;
       console.log("Current View:", calendarState.currentView);
       console.log("Current Period:", calendarState.currentPeriod);
-      console.log(
-        "Shared Config:",
-        Object.fromEntries(calendarState.sharedConfig)
-      );
 
       // Dependency debug
       console.log("Dependencies:", platform.dependencies.getStatus());
 
-      // Registry sync status
-      if (window._calendarRegistry) {
+      // UnifiedConfigUtils integration check
+      if (window.UnifiedConfigUtils) {
+        console.log("✅ UnifiedConfigUtils available for configuration");
+        const configStatus = window.UnifiedConfigUtils.getConfigStatus();
+        console.log("Config Status:", configStatus);
+      } else {
         console.log(
-          "Registry utilities:",
-          Object.keys(window._calendarRegistry.utilities || {})
-        );
-        console.log(
-          "Platform utilities:",
-          Array.from(platform.utilities.keys())
-        );
-
-        const registryCount = Object.keys(
-          window._calendarRegistry.utilities || {}
-        ).length;
-        const platformCount = platform.utilities.size;
-        console.log(
-          `Sync status: Registry(${registryCount}) Platform(${platformCount}) ${
-            registryCount === platformCount ? "✅" : "❌"
-          }`
+          "⚠️ UnifiedConfigUtils not found - load config extension first"
         );
       }
 
@@ -379,11 +337,11 @@ const createCalendarPlatform = () => {
 // 🚀 ROAM EXTENSION EXPORT - Professional Calendar Foundation
 // ===================================================================
 
-export default {
+const extension = {
   onload: async ({ extensionAPI }) => {
     console.log("🗓️ Calendar Foundation starting...");
 
-    // 🎯 COMPLETE REGISTRY STRUCTURE
+    // 🎯 SIMPLIFIED REGISTRY STRUCTURE
     window._calendarRegistry = {
       elements: [], // DOM elements (style tags, etc.)
       observers: [], // MutationObservers
@@ -391,7 +349,6 @@ export default {
       commands: [], // Command palette commands
       timeouts: [], // setTimeout IDs
       intervals: [], // setInterval IDs
-      utilities: {}, // Shared utilities
       extensions: new Map(), // Extension instances
     };
 
@@ -469,7 +426,7 @@ export default {
       "calendar-suite-foundation"
     );
 
-    // 📝 REGISTER COMMANDS
+    // 📝 REGISTER COMMANDS (Enhanced with config integration)
     const commands = [
       {
         label: "Calendar Suite: Show Status",
@@ -504,17 +461,38 @@ export default {
         label: "Calendar Suite: Debug State",
         callback: () => {
           const state = window.CalendarSuite.getCurrentView();
-          const config = Object.fromEntries(
-            window.CalendarSuite.calendarState.sharedConfig
-          );
-          console.log("🗓️ Current Calendar State:", { state, config });
+          console.log("🗓️ Current Calendar State:", state);
+
+          // Show config status if available
+          if (window.UnifiedConfigUtils) {
+            const configStatus = window.UnifiedConfigUtils.getConfigStatus();
+            console.log("📋 Config Status:", configStatus);
+          } else {
+            console.log(
+              "⚠️ UnifiedConfigUtils not loaded - no config info available"
+            );
+          }
+        },
+      },
+      {
+        label: "Calendar Suite: Open Config Page",
+        callback: () => {
+          if (window.UnifiedConfigUtils) {
+            window.roamAlphaAPI.ui.mainWindow.openPage({
+              page: { title: window.UnifiedConfigUtils.CONFIG_PAGE_TITLE },
+            });
+          } else {
+            alert(
+              "⚠️ UnifiedConfigUtils not loaded. Please load the config extension first."
+            );
+          }
         },
       },
     ];
 
     // Add commands to Roam
     commands.forEach((cmd) => {
-      window.roamAlphaAPI.ui.commandPalette.addCommand(cmd);
+      extensionAPI.ui.commandPalette.addCommand(cmd);
       window._calendarRegistry.commands.push(cmd.label);
     });
 
@@ -536,7 +514,7 @@ export default {
         description:
           "Professional lifecycle management and coordination platform for calendar suite",
         version: "1.0.0",
-        dependencies: [],
+        dependencies: [], // No dependencies - works standalone
         provides: ["foundation", "registry", "dependencies", "coordination"],
       }
     );
@@ -549,6 +527,9 @@ export default {
     );
     console.log(
       "🔧 Utilities available via: window.CalendarSuite.getUtility()"
+    );
+    console.log(
+      "📋 Configuration managed by: window.UnifiedConfigUtils (load config extension)"
     );
 
     // Store cleanup function globally
@@ -582,14 +563,6 @@ export default {
       registry.domListeners.forEach((listener) => {
         try {
           listener.el.removeEventListener(listener.type, listener.listener);
-        } catch (e) {
-          console.warn("Cleanup warning:", e);
-        }
-      });
-
-      registry.commands.forEach((label) => {
-        try {
-          window.roamAlphaAPI.ui.commandPalette.removeCommand({ label });
         } catch (e) {
           console.warn("Cleanup warning:", e);
         }
@@ -629,3 +602,6 @@ export default {
     console.log("✅ Calendar Foundation cleanup complete!");
   },
 };
+
+// Export for Roam Research extension system
+export default extension;

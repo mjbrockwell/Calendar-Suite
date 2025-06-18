@@ -1,179 +1,130 @@
 // ===================================================================
-// 📅 WEEKLY VIEW EXTENSION v2.1 - Professional Calendar Suite
+// 📅 WEEKLY VIEW EXTENSION v3.0 - CLEAN FOUNDATION EDITION
 // ===================================================================
+// Built from scratch on UnifiedConfigUtils - No legacy baggage!
 // Auto-detects weekly calendar pages and offers to populate with monthly calendar embeds
-// Rewritten to use Calendar Utilities foundation with redesigned configuration
 
 // Wrap everything in an IIFE to avoid global variable conflicts
 (function () {
   "use strict";
 
   // Extension-scoped variables
-  let weeklyViewConfig = null;
   let weeklyViewObserver = null;
   let weeklyViewTimeout = null;
 
   // ===================================================================
-  // 🌳 CONFIGURATION MANAGEMENT - Redesigned Structure
+  // 🧹 CLEAN CONFIG MANAGEMENT - Built for UnifiedConfigUtils
   // ===================================================================
 
-  async function initializeConfig() {
+  async function initializeCleanConfig() {
     try {
-      const configExists = await checkConfigExists();
-
-      if (!configExists) {
-        console.log("📋 Creating default Weekly View config...");
-        await createDefaultConfig();
-      } else {
-        console.log("📋 Weekly View config found");
+      if (!window.UnifiedConfigUtils) {
+        throw new Error(
+          "UnifiedConfigUtils not available - please install Unified Config Utils Extension first"
+        );
       }
-    } catch (error) {
-      console.error("❌ Error initializing config:", error);
-    }
-  }
 
-  function checkConfigExists() {
-    return new Promise((resolve) => {
-      try {
-        const result = window.roamAlphaAPI.data.q(`
-          [:find ?uid .
-           :where 
-           [?e :node/title "roam/ext/weekly view/config"]
-           [?e :block/uid ?uid]]
-        `);
-        resolve(!!result);
-      } catch (error) {
-        resolve(false);
-      }
-    });
-  }
+      console.log("📋 Initializing Weekly View config in master config...");
 
-  async function createDefaultConfig() {
-    try {
-      // Create the config page using RoamUtils
-      await CalendarUtilities.RoamUtils.createPage(
-        "roam/ext/weekly view/config"
+      // Simply write default values to master config - UnifiedConfigUtils handles everything!
+      await window.UnifiedConfigUtils.writeConfigValue(
+        "Weekly View",
+        "automatic guidance enabled",
+        "yes"
+      );
+      await window.UnifiedConfigUtils.writeConfigValue(
+        "Weekly View",
+        "add week count within the year",
+        "yes"
+      );
+      await window.UnifiedConfigUtils.writeConfigValue(
+        "Weekly View",
+        "include query for `[[Morning Intentions]]`",
+        "yes"
+      );
+      await window.UnifiedConfigUtils.writeConfigValue(
+        "Weekly View",
+        "add query for `[[Evening Reflections]]`",
+        "yes"
+      );
+      await window.UnifiedConfigUtils.writeConfigValue(
+        "Weekly View",
+        "add Plus-Minus-Next journal",
+        "yes"
       );
 
-      // Wait for page creation
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Get the page UID
-      const pageUid = window.roamAlphaAPI.data.q(`
-        [:find ?uid .
-         :where 
-         [?e :node/title "roam/ext/weekly view/config"]
-         [?e :block/uid ?uid]]
-      `);
-
-      if (!pageUid) throw new Error("Could not find created config page");
-
-      // Create the main Settings section (bold)
-      await window.roamAlphaAPI.data.block.create({
-        location: { "parent-uid": pageUid, order: 0 },
-        block: { string: "**Settings:**" },
-      });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Get settings block UID
-      const settingsUid = window.roamAlphaAPI.data.q(
-        `
-        [:find ?uid .
-         :in $ ?page-uid
-         :where 
-         [?page :block/uid ?page-uid]
-         [?settings :block/parents ?page]
-         [?settings :block/string "**Settings:**"]
-         [?settings :block/uid ?uid]]
-      `,
-        pageUid
-      );
-
-      // Add all settings in the correct order
-      if (settingsUid) {
-        const settingsBlocks = [
-          "automatic guidance enabled: yes",
-          "add week count within the year: yes",
-          "include query for `[[Morning Intentions]]`: yes",
-          "add query for `[[Evening Reflections]]`: yes",
-          "add Plus-Minus-Next journal: yes",
-        ];
-
-        for (let i = 0; i < settingsBlocks.length; i++) {
-          await window.roamAlphaAPI.data.block.create({
-            location: { "parent-uid": settingsUid, order: i },
-            block: { string: settingsBlocks[i] },
-          });
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      }
-
-      console.log("✅ Weekly View config created successfully!");
+      console.log("✅ Weekly View config initialized successfully!");
     } catch (error) {
-      console.error("❌ Error creating config:", error);
+      console.error("❌ Error initializing Weekly View config:", error);
       throw error;
     }
   }
 
-  async function loadConfig() {
+  function readCleanConfig() {
     try {
-      // Use ConfigUtils to read configuration with new setting names
-      const configPageTitle = "roam/ext/weekly view/config";
+      if (!window.UnifiedConfigUtils) {
+        console.warn("⚠️ UnifiedConfigUtils not available, using defaults");
+        return getDefaultConfig();
+      }
 
+      // Clean, simple config reading
       const config = {
         settings: {
           "automatic guidance enabled":
-            CalendarUtilities.ConfigUtils.readConfigValue(
-              configPageTitle,
+            window.UnifiedConfigUtils.readConfigValue(
+              "Weekly View",
               "automatic guidance enabled",
               "yes"
             ),
           "add week count within the year":
-            CalendarUtilities.ConfigUtils.readConfigValue(
-              configPageTitle,
+            window.UnifiedConfigUtils.readConfigValue(
+              "Weekly View",
               "add week count within the year",
               "yes"
             ),
           "include query for `[[Morning Intentions]]`":
-            CalendarUtilities.ConfigUtils.readConfigValue(
-              configPageTitle,
+            window.UnifiedConfigUtils.readConfigValue(
+              "Weekly View",
               "include query for `[[Morning Intentions]]`",
               "yes"
             ),
           "add query for `[[Evening Reflections]]`":
-            CalendarUtilities.ConfigUtils.readConfigValue(
-              configPageTitle,
+            window.UnifiedConfigUtils.readConfigValue(
+              "Weekly View",
               "add query for `[[Evening Reflections]]`",
               "yes"
             ),
           "add Plus-Minus-Next journal":
-            CalendarUtilities.ConfigUtils.readConfigValue(
-              configPageTitle,
+            window.UnifiedConfigUtils.readConfigValue(
+              "Weekly View",
               "add Plus-Minus-Next journal",
               "yes"
             ),
         },
       };
 
-      console.log("📋 Loaded Weekly View config:", config);
+      console.log("📋 Loaded clean Weekly View config:", config);
       return config;
     } catch (error) {
-      console.error("❌ Error loading config:", error);
-      // Return default config on error
-      return {
-        settings: {
-          "automatic guidance enabled": "yes",
-          "add week count within the year": "yes",
-          "include query for `[[Morning Intentions]]`": "yes",
-          "add query for `[[Evening Reflections]]`": "yes",
-          "add Plus-Minus-Next journal": "yes",
-        },
-      };
+      console.error("❌ Error reading config, using defaults:", error);
+      return getDefaultConfig();
     }
   }
 
+  function getDefaultConfig() {
+    return {
+      settings: {
+        "automatic guidance enabled": "yes",
+        "add week count within the year": "yes",
+        "include query for `[[Morning Intentions]]`": "yes",
+        "add query for `[[Evening Reflections]]`": "yes",
+        "add Plus-Minus-Next journal": "yes",
+      },
+    };
+  }
+
   // ===================================================================
-  // 🗓️ PAGE DETECTION - Using new utilities
+  // 🗓️ PAGE DETECTION - Using Calendar Utilities
   // ===================================================================
 
   function getCurrentPageTitle() {
@@ -185,7 +136,6 @@
   }
 
   function parseWeeklyTitle(weeklyTitle) {
-    // Use WeeklyUtils to parse the weekly title
     return CalendarUtilities.WeeklyUtils.parseWeeklyTitle(weeklyTitle);
   }
 
@@ -216,7 +166,7 @@
   }
 
   // ===================================================================
-  // 🔍 DEPENDENCY CHECKING - Preserved legacy logic
+  // 🔍 DEPENDENCY CHECKING - Preserved from working version
   // ===================================================================
 
   async function checkMonthlyPageIsPopulated(monthlyPageTitle, weeklyTitle) {
@@ -373,7 +323,7 @@
   }
 
   // ===================================================================
-  // 👁️ PAGE CHANGE DETECTION - Updated for new config structure
+  // 👁️ PAGE CHANGE DETECTION - Clean and simple
   // ===================================================================
 
   function setupPageDetection() {
@@ -423,7 +373,7 @@
 
   async function checkCurrentPage() {
     try {
-      const config = await loadConfig();
+      const config = readCleanConfig();
 
       // Only proceed if automatic guidance is enabled
       if (config.settings["automatic guidance enabled"] !== "yes") {
@@ -483,7 +433,7 @@
   }
 
   // ===================================================================
-  // 🦜 UI BUTTON MANAGEMENT - Preserved legacy interface
+  // 🦜 UI BUTTON MANAGEMENT - Preserved working interface
   // ===================================================================
 
   function showWeeklyButton(pageTitle, state, config, pageIssues = []) {
@@ -497,7 +447,7 @@
     const button = document.createElement("div");
     button.id = "weekly-view-button";
 
-    // Button styles - preserved from legacy
+    // Button styles
     const baseStyles = `
       position: fixed;
       top: 60px;
@@ -577,7 +527,7 @@
       button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
     });
 
-    // Add click handler - preserved multi-step workflow
+    // Add click handler
     button.addEventListener("click", () => {
       console.log(
         `📅 Button clicked - State: ${button.dataset.state}, Issue: ${button.dataset.issueReason}`
@@ -585,18 +535,14 @@
 
       if (button.dataset.state === "warning") {
         if (button.dataset.issueReason === "missing") {
-          // Step 1: Create the page
           handleCreatePageSimple(button);
         } else {
-          // Navigate to existing but incomplete page
           handleNavigateToIncompletePageSimple(button);
         }
       } else if (button.dataset.state === "navigating") {
-        // Step 2: Navigate to the page
         handleNavigateToPageSimple(button);
       } else if (button.dataset.state === "ready") {
-        // Phase 3: Create weekly content!
-        console.log("🚀 Phase 3: Creating weekly content!");
+        console.log("🚀 Creating weekly content!");
         createWeeklyContent(button);
       }
     });
@@ -615,7 +561,7 @@
   }
 
   // ===================================================================
-  // 🎯 CLICK HANDLERS - Preserved legacy workflow
+  // 🎯 CLICK HANDLERS - Preserved working workflow
   // ===================================================================
 
   async function handleCreatePageSimple(button) {
@@ -635,7 +581,7 @@
         </div>
       `;
 
-      // Create the monthly page using RoamUtils
+      // Create the monthly page using CalendarUtilities
       await CalendarUtilities.RoamUtils.createPage(missingPage);
 
       // Wait a moment for creation
@@ -772,7 +718,7 @@
   }
 
   // ===================================================================
-  // 🚀 WEEKLY CONTENT CREATION - Enhanced with redesigned features
+  // 🚀 WEEKLY CONTENT CREATION - Enhanced features with clean config
   // ===================================================================
 
   async function createWeeklyContent(button) {
@@ -806,7 +752,7 @@
       }
 
       // Load config for enabled features
-      const config = await loadConfig();
+      const config = readCleanConfig();
       let order = 0;
 
       // 1. Add week count within the year (if enabled)
@@ -912,7 +858,7 @@
   }
 
   // ===================================================================
-  // 🆕 FEATURE FUNCTIONS - Redesigned & New Features
+  // 🆕 FEATURE FUNCTIONS - Using clean config
   // ===================================================================
 
   async function addWeekCountInYearLine(pageUid, order, weeklyTitle) {
@@ -1009,7 +955,6 @@
     }
   }
 
-  // 🆕 NEW FEATURE: Evening Reflections Query
   async function addEveningReflectionsQuery(pageUid, order, weeklyTitle) {
     try {
       const parsed = parseWeeklyTitle(weeklyTitle);
@@ -1070,7 +1015,6 @@
     }
   }
 
-  // 🆕 NEW FEATURE: Plus-Minus-Next Journal
   async function addPlusMinusNextJournal(pageUid, order, weeklyTitle) {
     try {
       // Create the exact structure as shown in the image
@@ -1220,7 +1164,7 @@
   }
 
   // ===================================================================
-  // 🔍 EMBED DISCOVERY - Preserved legacy logic
+  // 🔍 EMBED DISCOVERY - Preserved working logic
   // ===================================================================
 
   async function findWeekBlocksForWeekly(weeklyTitle) {
@@ -1340,21 +1284,31 @@
     // Remove any existing button
     removeWeeklyButton();
 
-    // Clear config cache
-    weeklyViewConfig = null;
-
     console.log("✅ Weekly View Extension cleanup complete");
   }
 
   // ===================================================================
-  // 🚀 EXTENSION EXPORT - Professional Calendar Suite Integration
+  // 🚀 EXTENSION EXPORT - Clean Foundation Calendar Suite Integration
   // ===================================================================
 
   const WeeklyViewExtension = {
     onload: async ({ extensionAPI }) => {
-      console.log("📅 Weekly View Extension v2.1 loading...");
+      console.log(
+        "📅 Weekly View Extension v3.0 loading (Clean Foundation)..."
+      );
 
-      // Wait for Calendar Utilities to be available
+      // 🔒 DEPENDENCY CHECK - UnifiedConfigUtils required
+      if (!window.UnifiedConfigUtils) {
+        console.error(
+          "❌ Weekly View Extension requires Unified Config Utils Extension - please install and load first!"
+        );
+        alert(
+          "❌ Weekly View Extension requires Unified Config Utils Extension.\n\nPlease install Unified Config Utils Extension first, then reload."
+        );
+        return;
+      }
+
+      // 🔒 DEPENDENCY CHECK - Calendar Utilities required
       let attempts = 0;
       while (!window.CalendarUtilities && attempts < 50) {
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -1363,22 +1317,30 @@
 
       if (!window.CalendarUtilities) {
         console.error(
-          "❌ Calendar Utilities not found! Weekly View Extension requires Calendar Utilities."
+          "❌ Weekly View Extension requires Calendar Utilities Extension - please install first!"
+        );
+        alert(
+          "❌ Weekly View Extension requires Calendar Utilities Extension.\n\nPlease install Calendar Utilities Extension first, then reload."
         );
         return;
       }
 
-      console.log(
-        "🔧 Calendar Utilities found, proceeding with Weekly View Extension setup..."
-      );
+      console.log("🔧 Dependencies satisfied, proceeding with setup...");
 
-      // Initialize configuration
-      await initializeConfig();
+      // 📋 INITIALIZE CLEAN CONFIG SYSTEM
+      try {
+        await initializeCleanConfig();
+        console.log("✅ Clean config system initialized");
+      } catch (error) {
+        console.error("❌ Error initializing config system:", error);
+        alert(`❌ Config initialization failed: ${error.message}`);
+        return;
+      }
 
-      // Set up page change detection
+      // 👁️ SET UP PAGE DETECTION
       setupPageDetection();
 
-      // Initial check for current page
+      // 🔍 INITIAL PAGE CHECK
       await checkCurrentPage();
 
       // 🎯 REGISTER WITH CALENDAR SUITE
@@ -1391,14 +1353,18 @@
             isWeeklyPage,
             parseWeeklyTitle,
             getRequiredMonthlyPages,
-            version: "2.1.0",
+            version: "3.0.0",
           },
           {
             name: "Weekly View",
             description:
-              "Auto-detects weekly calendar pages and offers to populate with monthly calendar embeds",
-            version: "2.1.0",
-            dependencies: ["calendar-foundation", "calendar-utilities"],
+              "Auto-detects weekly calendar pages and offers to populate with monthly calendar embeds (Clean Foundation)",
+            version: "3.0.0",
+            dependencies: [
+              "calendar-foundation",
+              "calendar-utilities",
+              "unified-config-utils",
+            ],
             provides: [
               "weekly-view-creation",
               "weekly-page-detection",
@@ -1413,12 +1379,16 @@
         console.log("🔗 Weekly View Extension registered with Calendar Suite");
       }
 
-      console.log("✅ Weekly View Extension v2.1 loaded successfully!");
+      console.log("✅ Weekly View Extension v3.0 loaded successfully!");
+      console.log("🧹 Built on clean foundation - no legacy baggage!");
+      console.log(
+        `📋 Config managed via unified system: [[${window.UnifiedConfigUtils.CONFIG_PAGE_TITLE}]]`
+      );
     },
 
     onunload: () => {
       cleanup();
-      console.log("👋 Weekly View Extension v2.1 unloaded");
+      console.log("👋 Weekly View Extension v3.0 unloaded");
     },
   };
 
