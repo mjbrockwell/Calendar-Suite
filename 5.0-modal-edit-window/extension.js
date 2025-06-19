@@ -296,7 +296,7 @@ function createSetupModal(tagConfigs) {
       Customize your 10 event types (#yv0 - #yv9). These tags go <strong>after the date alias</strong> but <strong>before your event text</strong> on monthly calendar pages.
     </p>
     <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #6c757d;">
-      <strong>Usage example:</strong> <code>[[January 1st, 2025]] #yv0 Team meeting at 2pm</code>
+      <strong>Usage example:</strong> <code>[📆]([[January 1st, 2025]]) #yv0 Team meeting at 2pm</code>
     </div>
   `;
 
