@@ -345,22 +345,39 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
   // ===================================================================
 
   setupDeadlineCountdown() {
+    console.log("🔍 DEBUG: setupDeadlineCountdown called");
+    console.log("🔍 DEBUG: currentConfig:", this.currentConfig);
+
     // Find all deadline tags and add event listeners
     const deadlineTags = Object.entries(this.currentConfig)
       .filter(([tag, config]) => /deadline/i.test(config.label))
       .map(([tag]) => tag);
 
+    console.log("🔍 DEBUG: Found deadline tags:", deadlineTags);
+
     deadlineTags.forEach((tag) => {
       const tagElements = document.querySelectorAll(
         `span.rm-page-ref--tag[data-tag="${tag}"]`
       );
+      console.log(
+        `🔍 DEBUG: Found ${tagElements.length} elements for tag ${tag}`
+      );
+
       tagElements.forEach((tagElement) => {
+        console.log("🔍 DEBUG: Attaching tooltip to element:", tagElement);
         this.attachDeadlineTooltip(tagElement, tag);
       });
     });
   }
 
   attachDeadlineTooltip(tagElement, tag) {
+    console.log(
+      "🔍 DEBUG: attachDeadlineTooltip called for tag:",
+      tag,
+      "element:",
+      tagElement
+    );
+
     // Remove existing listeners to prevent duplicates
     if (tagElement._deadlineHandlers) {
       tagElement.removeEventListener(
@@ -374,8 +391,14 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
     }
 
     // Create new handlers
-    const enterHandler = (e) => this.showDeadlineTooltip(e.target, tag);
-    const leaveHandler = () => this.hideDeadlineTooltip();
+    const enterHandler = (e) => {
+      console.log("🔍 DEBUG: Mouse enter event fired for tag:", tag);
+      this.showDeadlineTooltip(e.target, tag);
+    };
+    const leaveHandler = () => {
+      console.log("🔍 DEBUG: Mouse leave event fired for tag:", tag);
+      this.hideDeadlineTooltip();
+    };
 
     // Store handlers for cleanup
     tagElement._deadlineHandlers = { enter: enterHandler, leave: leaveHandler };
@@ -383,21 +406,37 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
     // Attach event listeners
     tagElement.addEventListener("mouseenter", enterHandler);
     tagElement.addEventListener("mouseleave", leaveHandler);
+
+    console.log("🔍 DEBUG: Event listeners attached successfully");
   }
 
   showDeadlineTooltip(tagElement, tag) {
+    console.log("🔍 DEBUG: showDeadlineTooltip called for tag:", tag);
+    console.log("🔍 DEBUG: tagElement:", tagElement);
+
     try {
       // Hide any existing tooltip first
       this.hideDeadlineTooltip();
 
       // Get the tooltip content
+      console.log("🔍 DEBUG: Getting tooltip content...");
       const tooltipContent = this.getDeadlineTooltipContent(tagElement, tag);
-      if (!tooltipContent) return; // Graceful failure
+      console.log("🔍 DEBUG: Tooltip content result:", tooltipContent);
+
+      if (!tooltipContent) {
+        console.log("🔍 DEBUG: No tooltip content, returning");
+        return; // Graceful failure
+      }
 
       // Create tooltip element
       const tooltip = document.createElement("div");
       tooltip.className = "yearly-view-deadline-tooltip";
       tooltip.textContent = tooltipContent;
+
+      console.log(
+        "🔍 DEBUG: Created tooltip element with content:",
+        tooltipContent
+      );
 
       // Style based on tag colors for extra polish
       const config = this.currentConfig[tag];
@@ -405,13 +444,16 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
         tooltip.style.background = config.secondaryColor;
         tooltip.style.color = config.primaryColor;
         tooltip.style.borderColor = config.primaryColor;
+        console.log("🔍 DEBUG: Applied colors from config:", config);
       }
 
       // Add to page
       document.body.appendChild(tooltip);
+      console.log("🔍 DEBUG: Tooltip added to document body");
 
       // Position the tooltip
       this.positionTooltip(tooltip, tagElement);
+      console.log("🔍 DEBUG: Tooltip positioned");
 
       // Store reference for cleanup
       this.currentTooltip = tooltip;
@@ -419,21 +461,25 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       // Fade in
       requestAnimationFrame(() => {
         tooltip.classList.add("visible");
+        console.log("🔍 DEBUG: Tooltip fade-in applied");
       });
     } catch (error) {
       // Graceful failure - just do nothing
-      console.debug("Deadline tooltip failed gracefully:", error);
+      console.error("🔍 DEBUG: Deadline tooltip failed:", error);
     }
   }
 
   hideDeadlineTooltip() {
+    console.log("🔍 DEBUG: hideDeadlineTooltip called");
     if (this.currentTooltip) {
+      console.log("🔍 DEBUG: Hiding existing tooltip");
       this.currentTooltip.classList.remove("visible");
 
       // Remove after fade out
       setTimeout(() => {
         if (this.currentTooltip && this.currentTooltip.parentNode) {
           this.currentTooltip.parentNode.removeChild(this.currentTooltip);
+          console.log("🔍 DEBUG: Tooltip removed from DOM");
         }
         this.currentTooltip = null;
       }, 200);
@@ -441,8 +487,12 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
   }
 
   positionTooltip(tooltip, tagElement) {
+    console.log("🔍 DEBUG: positionTooltip called");
     const tagRect = tagElement.getBoundingClientRect();
     const tooltipRect = tooltip.getBoundingClientRect();
+
+    console.log("🔍 DEBUG: tagRect:", tagRect);
+    console.log("🔍 DEBUG: tooltipRect:", tooltipRect);
 
     // Position above the tag, centered
     let left = tagRect.left + tagRect.width / 2 - tooltipRect.width / 2;
@@ -462,33 +512,56 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
 
     tooltip.style.left = left + window.scrollX + "px";
     tooltip.style.top = top + window.scrollY + "px";
+
+    console.log("🔍 DEBUG: Final position - left:", left, "top:", top);
   }
 
   getDeadlineTooltipContent(tagElement, tag) {
+    console.log("🔍 DEBUG: getDeadlineTooltipContent called for tag:", tag);
+
     try {
       // Find the containing block
       const blockElement = tagElement.closest(".rm-block");
-      if (!blockElement) return null;
+      if (!blockElement) {
+        console.log("🔍 DEBUG: No block element found");
+        return null;
+      }
+      console.log("🔍 DEBUG: Found block element:", blockElement);
 
       // Get the block text content
       const blockText =
         blockElement.textContent || blockElement.innerText || "";
+      console.log("🔍 DEBUG: Block text:", blockText);
 
       // Look for date pattern: [[Month Day, Year]]
       const dateMatch = blockText.match(
         /\[\[([A-Za-z]+)\s+(\d{1,2}(?:st|nd|rd|th)?),\s+(\d{4})\]\]/
       );
+      console.log("🔍 DEBUG: Date match result:", dateMatch);
+
       if (!dateMatch) {
+        console.log("🔍 DEBUG: No date found, using fallback tooltip");
         // Fallback to normal tooltip
         const config = this.currentConfig[tag];
         return `${config.label} (#${tag})`;
       }
 
       const [, monthStr, dayStr, yearStr] = dateMatch;
+      console.log(
+        "🔍 DEBUG: Parsed date parts - month:",
+        monthStr,
+        "day:",
+        dayStr,
+        "year:",
+        yearStr
+      );
 
       // Parse the date
       const targetDate = this.parseRoamDate(monthStr, dayStr, yearStr);
+      console.log("🔍 DEBUG: Parsed target date:", targetDate);
+
       if (!targetDate) {
+        console.log("🔍 DEBUG: Date parsing failed, using fallback tooltip");
         // Fallback to normal tooltip
         const config = this.currentConfig[tag];
         return `${config.label} (#${tag})`;
@@ -497,9 +570,11 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       // Calculate days remaining
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Reset to start of day
+      console.log("🔍 DEBUG: Today:", today);
 
       const timeDiff = targetDate.getTime() - today.getTime();
       const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      console.log("🔍 DEBUG: Time diff:", timeDiff, "Days diff:", daysDiff);
 
       // Create enhanced tooltip
       const config = this.currentConfig[tag];
@@ -518,8 +593,10 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
         } overdue`;
       }
 
+      console.log("🔍 DEBUG: Final tooltip text:", tooltipText);
       return tooltipText;
     } catch (error) {
+      console.error("🔍 DEBUG: Error in getDeadlineTooltipContent:", error);
       // Graceful failure - return normal tooltip
       const config = this.currentConfig[tag];
       return config ? `${config.label} (#${tag})` : null;
