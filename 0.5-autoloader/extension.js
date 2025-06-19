@@ -1,13 +1,6 @@
-// ===================================================================
-// 🗓️ CALENDAR SUITE MODAL INSTALLER - FIXED
-// ===================================================================
-// Simple, visual installer for Calendar Suite
-// User installs ONE extension, gets a nice modal to load the rest!
-// ===================================================================
+// 🗓️ Calendar Suite Modal Installer
+// Complete rebuild based on debugging session learnings
 
-console.log("🗓️ Calendar Suite Installer starting...");
-
-// Extension definitions
 const CALENDAR_EXTENSIONS = [
   {
     id: "foundation",
@@ -15,6 +8,7 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/1-calendar-foundation/extension.js",
     description: "Core calendar infrastructure",
     critical: true,
+    exportPattern: "standard",
   },
   {
     id: "config",
@@ -22,6 +16,7 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/1.2-config-utilities/extension.js",
     description: "Configuration management",
     critical: true,
+    exportPattern: "standard",
   },
   {
     id: "utilities",
@@ -29,6 +24,7 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/1.5-calendar-utilities/extension.js",
     description: "Shared calendar functions",
     critical: true,
+    exportPattern: "standard",
   },
   {
     id: "monthly",
@@ -36,6 +32,7 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/2.0-monthly-view/extension.js",
     description: "Monthly calendar display",
     critical: false,
+    exportPattern: "standard",
   },
   {
     id: "weekly",
@@ -43,6 +40,7 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/3.0-weekly-view/extension.js",
     description: "Weekly calendar display",
     critical: false,
+    exportPattern: "standard",
   },
   {
     id: "bandaid",
@@ -50,6 +48,7 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/3.5-weekly-bandaid/extension.js",
     description: "Weekly view enhancements",
     critical: false,
+    exportPattern: "self-executing",
   },
   {
     id: "yearly",
@@ -57,6 +56,7 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/4.0-yearly-view/extension.js",
     description: "Yearly calendar display",
     critical: false,
+    exportPattern: "standard",
   },
   {
     id: "modal",
@@ -64,540 +64,482 @@ const CALENDAR_EXTENSIONS = [
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/5.0-modal-edit-window/extension.js",
     description: "Event editing interface",
     critical: false,
+    exportPattern: "unknown",
   },
 ];
 
-// Track loaded extensions
+// Global state
 let loadedExtensions = new Map();
 let installerModal = null;
+let installLog = [];
 
-// Create the installer modal
-function createInstallerModal() {
-  const modalHTML = `
-        <div id="calendar-suite-installer" style="
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            z-index: 10000;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        ">
-            <div style="padding: 20px; border-bottom: 1px solid #eee;">
-                <h2 style="margin: 0; color: #333; display: flex; align-items: center;">
-                    <span style="font-size: 24px; margin-right: 10px;">🗓️</span>
-                    Calendar Suite Installer
-                </h2>
-                <p style="margin: 10px 0 0 0; color: #666;">
-                    Install your calendar extensions one by one, or use Auto-Install!
-                </p>
-            </div>
-            
-            <div style="padding: 20px;">
-                <div style="margin-bottom: 20px;">
-                    <button id="auto-install-btn" style="
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        border: none;
-                        border-radius: 8px;
-                        padding: 12px 24px;
-                        font-size: 16px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        width: 100%;
-                        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-                        transition: all 0.3s ease;
-                    ">
-                        🚀 Auto-Install All Extensions
-                    </button>
-                </div>
-                
-                <div style="text-align: center; margin: 20px 0; color: #999; position: relative;">
-                    <span style="background: white; padding: 0 15px;">or install individually</span>
-                    <hr style="position: absolute; top: 50%; left: 0; right: 0; margin: 0; border: none; border-top: 1px solid #eee; z-index: -1;">
-                </div>
-                
-                <div style="display: grid; gap: 12px;">
-                    ${CALENDAR_EXTENSIONS.map(
-                      (ext) => `
-                        <div data-id="${ext.id}" style="
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            padding: 12px;
-                            border: 2px solid #e9ecef;
-                            border-radius: 8px;
-                            transition: all 0.2s;
-                        ">
-                            <div style="display: flex; align-items: center; flex: 1;">
-                                <span class="status-icon" style="font-size: 20px; margin-right: 12px;">⭕</span>
-                                <div>
-                                    <div style="font-weight: 600; color: #333;">
-                                        ${ext.name}
-                                        ${
-                                          ext.critical
-                                            ? '<span style="background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 8px;">REQUIRED</span>'
-                                            : ""
-                                        }
-                                    </div>
-                                    <div style="color: #666; font-size: 12px;">
-                                        ${ext.description}
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="install-btn" data-id="${
-                              ext.id
-                            }" style="
-                                background: #28a745;
-                                color: white;
-                                border: none;
-                                border-radius: 4px;
-                                padding: 8px 12px;
-                                font-size: 12px;
-                                cursor: pointer;
-                                transition: all 0.2s;
-                            ">
-                                Install
-                            </button>
-                        </div>
-                    `
-                    ).join("")}
-                </div>
-                
-                <div id="install-log" style="
-                    margin-top: 20px;
-                    padding: 10px;
-                    background: #f8f9fa;
-                    border-radius: 6px;
-                    font-family: monospace;
-                    font-size: 12px;
-                    max-height: 150px;
-                    overflow-y: auto;
-                    display: none;
-                ">
-                </div>
-            </div>
-            
-            <div style="padding: 20px; border-top: 1px solid #eee; text-align: right;">
-                <button id="close-installer-btn" style="
-                    background: #6c757d;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 8px 16px;
-                    cursor: pointer;
-                ">
-                    Close
-                </button>
-            </div>
-        </div>
-        
-        <div id="calendar-installer-backdrop" style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 9999;
-        "></div>
-    `;
-
-  // Add to page
-  const container = document.createElement("div");
-  container.innerHTML = modalHTML;
-  document.body.appendChild(container);
-
-  // Add event listeners
-  setupModalEventListeners();
-
-  return container;
+// Create mock extension API with CORRECT structure
+function createMockExtensionAPI(extId) {
+  return {
+    settings: {
+      get: (key) => localStorage.getItem(`cal-${extId}-${key}`),
+      set: (key, value) => localStorage.setItem(`cal-${extId}-${key}`, value),
+      panel: {
+        create: (config) => ({ id: Date.now(), config }),
+      },
+    },
+    // CRITICAL: ui namespace required - this was the main bug!
+    ui: {
+      commandPalette: {
+        // CRITICAL: under ui, not root
+        addCommand: (command) => {
+          console.log(`📋 Command added: ${command.label}`);
+          return { id: Date.now(), ...command };
+        },
+        removeCommand: (commandId) => {
+          console.log(`📋 Command removed: ${commandId}`);
+          return true;
+        },
+      },
+      createButton: (config) => ({ id: Date.now(), ...config }),
+      showNotification: (message, type = "info") => {
+        console.log(`🔔 Notification: ${message} (${type})`);
+        return true;
+      },
+    },
+  };
 }
 
-// Setup event listeners for the modal
-function setupModalEventListeners() {
-  // Close button
-  document
-    .getElementById("close-installer-btn")
-    .addEventListener("click", closeInstaller);
-
-  // Backdrop click
-  document
-    .getElementById("calendar-installer-backdrop")
-    .addEventListener("click", closeInstaller);
-
-  // Auto install button
-  document
-    .getElementById("auto-install-btn")
-    .addEventListener("click", autoInstallAll);
-
-  // Individual install buttons
-  document.querySelectorAll(".install-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const extId = e.target.getAttribute("data-id");
-      installExtension(extId);
-    });
-  });
-
-  // Hover effects
-  const autoBtn = document.getElementById("auto-install-btn");
-  autoBtn.addEventListener("mouseenter", () => {
-    autoBtn.style.transform = "translateY(-2px)";
-  });
-  autoBtn.addEventListener("mouseleave", () => {
-    autoBtn.style.transform = "translateY(0)";
-  });
-}
-
-// Close the installer modal
-function closeInstaller() {
-  const installer = document.getElementById("calendar-suite-installer");
-  if (installer) {
-    installer.parentElement.remove();
-  }
-}
-
-// Log function
+// Logging utility
 function logMessage(message, type = "info") {
-  const logDiv = document.getElementById("install-log");
-  if (logDiv) {
-    logDiv.style.display = "block";
-    const timestamp = new Date().toLocaleTimeString();
-    const color =
-      type === "error" ? "#dc3545" : type === "success" ? "#28a745" : "#333";
-    logDiv.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
-    logDiv.scrollTop = logDiv.scrollHeight;
-  }
-  console.log(`📦 Calendar Installer: ${message}`);
+  const timestamp = new Date().toLocaleTimeString();
+  installLog.push({ timestamp, message, type });
+  console.log(`[${timestamp}] ${message}`);
+  updateInstallLog();
 }
 
-// Update extension status in the UI
-function updateExtensionStatus(extId, status, message = "") {
-  const item = document.querySelector(`[data-id="${extId}"]`);
-  if (!item) return;
+// Update install log UI
+function updateInstallLog() {
+  const logContainer = document.getElementById("cal-install-log");
+  if (!logContainer) return;
 
-  const statusIcon = item.querySelector(".status-icon");
-  const installBtn = item.querySelector(".install-btn");
+  logContainer.innerHTML = installLog
+    .map((entry) => {
+      const color =
+        entry.type === "error"
+          ? "#ff6b6b"
+          : entry.type === "success"
+          ? "#51cf66"
+          : "#74c0fc";
+      return `<div style="color: ${color}; margin: 2px 0;">
+      [${entry.timestamp}] ${entry.message}
+    </div>`;
+    })
+    .join("");
+
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// Update extension status in UI
+function updateExtensionStatus(extId, status, error = null) {
+  const row = document.getElementById(`ext-${extId}`);
+  if (!row) return;
+
+  const statusIcon = row.querySelector(".status-icon");
+  const button = row.querySelector("button");
 
   switch (status) {
+    case "pending":
+      statusIcon.textContent = "⭕";
+      button.textContent = "Install";
+      button.disabled = false;
+      button.style.background = "linear-gradient(135deg, #51cf66, #40c057)";
+      row.style.border = "1px solid #e9ecef";
+      break;
+
     case "loading":
       statusIcon.textContent = "🔄";
-      installBtn.textContent = "Loading...";
-      installBtn.disabled = true;
-      installBtn.style.background = "#ffc107";
+      button.textContent = "Loading...";
+      button.disabled = true;
+      button.style.background = "#adb5bd";
+      row.style.border = "1px solid #74c0fc";
       break;
+
     case "success":
       statusIcon.textContent = "✅";
-      installBtn.textContent = "Installed";
-      installBtn.disabled = true;
-      installBtn.style.background = "#6c757d";
-      item.style.borderColor = "#28a745";
+      button.textContent = "Installed";
+      button.disabled = true;
+      button.style.background = "#51cf66";
+      row.style.border = "2px solid #51cf66";
       break;
+
     case "error":
       statusIcon.textContent = "❌";
-      installBtn.textContent = "Retry";
-      installBtn.disabled = false;
-      installBtn.style.background = "#dc3545";
-      item.style.borderColor = "#dc3545";
+      button.textContent = "Retry";
+      button.disabled = false;
+      button.style.background = "linear-gradient(135deg, #ff6b6b, #fa5252)";
+      row.style.border = "2px solid #ff6b6b";
       break;
   }
 }
 
-// Install a single extension
+// Install single extension
 async function installExtension(extId) {
   const extension = CALENDAR_EXTENSIONS.find((ext) => ext.id === extId);
-  if (!extension) return;
+  if (!extension) {
+    throw new Error(`Extension ${extId} not found`);
+  }
 
+  logMessage(`🔄 Installing ${extension.name}...`);
   updateExtensionStatus(extId, "loading");
-  logMessage(`Installing ${extension.name}...`);
 
   try {
-    // Fetch the extension code
+    // Fetch extension code
+    logMessage(`📡 Fetching from GitHub: ${extension.name}`);
     const response = await fetch(extension.url);
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const code = await response.text();
-    if (!code.trim()) {
-      throw new Error("Empty extension file");
-    }
+    logMessage(`📝 Code retrieved (${code.length} bytes)`);
 
-    // Create blob URL and import
+    // Create blob URL to bypass MIME type restrictions
     const blob = new Blob([code], { type: "application/javascript" });
     const blobUrl = URL.createObjectURL(blob);
 
     try {
+      // Setup mock API with CORRECT structure
+      const mockAPI = createMockExtensionAPI(extId);
+
+      // CRITICAL: Debug pre-execution API structure
+      console.log(`🔍 PRE-EXECUTION DEBUG for ${extension.name}:`);
+      console.log(`  mockAPI exists:`, !!mockAPI);
+      console.log(`  mockAPI.ui exists:`, !!mockAPI.ui);
+      console.log(
+        `  mockAPI.ui.commandPalette exists:`,
+        !!mockAPI.ui.commandPalette
+      );
+
+      // Test addCommand function
+      try {
+        const testResult = mockAPI.ui.commandPalette.addCommand({
+          label: "test",
+        });
+        console.log(`  ✅ addCommand test successful:`, testResult);
+      } catch (testError) {
+        console.log(`  ❌ addCommand test failed:`, testError);
+      }
+
+      // Make API globally available (multiple locations for compatibility)
+      window.extensionAPI = mockAPI;
+      window._extensionAPI = mockAPI;
+      if (!window.roamExtensions) window.roamExtensions = {};
+      window.roamExtensions.extensionAPI = mockAPI;
+
+      // Import module
+      logMessage(`⚡ Importing module: ${extension.name}`);
       const module = await import(blobUrl);
 
+      // Handle different export patterns
+      let executed = false;
+
       if (module.default?.onload) {
-        // 🔧 FIXED: Create correct mock extension API structure
-        const mockAPI = {
-          settings: {
-            get: (key) => localStorage.getItem(`cal-${extId}-${key}`),
-            set: (key, value) =>
-              localStorage.setItem(`cal-${extId}-${key}`, value),
-            panel: {
-              create: (config) => {
-                console.log(
-                  `⚙️ Settings panel created: ${JSON.stringify(config)}`
-                );
-                return { id: Date.now(), config };
-              },
-            },
-          },
-          ui: {
-            // 🔧 FIXED: Move commandPalette under ui namespace
-            commandPalette: {
-              addCommand: (command) => {
-                console.log(
-                  `📋 Command added: ${
-                    command.label || command.name || command.id || "unnamed"
-                  }`
-                );
-                return { id: command.id || Date.now(), ...command };
-              },
-              removeCommand: (commandId) => {
-                console.log(`📋 Command removed: ${commandId}`);
-                return true;
-              },
-            },
-            createButton: (config) => {
-              console.log(
-                `🔘 Button created: ${config.label || config.text || "unnamed"}`
-              );
-              return { id: Date.now(), ...config };
-            },
-            showNotification: (message, type = "info") => {
-              console.log(`📢 Notification (${type}): ${message}`);
-              return true;
-            },
-          },
-        };
-
-        // Make extensionAPI globally available (some extensions check global scope)
-        window.extensionAPI = mockAPI;
-        window._extensionAPI = mockAPI;
-
-        // Also store it in common global locations extensions might check
-        if (!window.roamExtensions) window.roamExtensions = {};
-        window.roamExtensions.extensionAPI = mockAPI;
-
-        console.log(
-          `🌐 Made extensionAPI globally available for ${extension.name}`
-        );
-
-        // Debug: Extensive API validation
-        console.log(`🔍 PRE-EXECUTION DEBUG for ${extension.name}:`);
-        console.log(`  mockAPI exists:`, !!mockAPI);
-        console.log(`  mockAPI.ui exists:`, !!mockAPI.ui);
-        console.log(
-          `  mockAPI.ui.commandPalette exists:`,
-          !!mockAPI.ui.commandPalette
-        );
-        console.log(
-          `  mockAPI.ui.commandPalette.addCommand exists:`,
-          !!mockAPI.ui.commandPalette?.addCommand
-        );
-
-        // Test the addCommand function
-        try {
-          const testResult = mockAPI.ui.commandPalette.addCommand({
-            label: "test",
-          });
-          console.log(`  ✅ addCommand test successful:`, testResult);
-        } catch (testError) {
-          console.log(`  ❌ addCommand test failed:`, testError);
-        }
-
-        // Log the exact parameter object being passed
-        const extensionAPIParam = { extensionAPI: mockAPI };
-        console.log(`  Parameter object:`, extensionAPIParam);
-        console.log(
-          `  extensionAPIParam.extensionAPI exists:`,
-          !!extensionAPIParam.extensionAPI
-        );
-        console.log(
-          `  extensionAPIParam.extensionAPI.ui exists:`,
-          !!extensionAPIParam.extensionAPI?.ui
-        );
-        console.log(
-          `  extensionAPIParam.extensionAPI.ui.commandPalette exists:`,
-          !!extensionAPIParam.extensionAPI?.ui?.commandPalette
-        );
-
-        // Execute the extension with detailed error catching
-        try {
-          // Handle different export formats
-          if (module.default?.onload) {
-            await module.default.onload(extensionAPIParam);
-          } else if (module.onload) {
-            await module.onload(extensionAPIParam);
-          } else if (module.default && typeof module.default === "function") {
-            await module.default(extensionAPIParam);
-          } else {
-            // Extension might be self-executing (like Weekly Bandaid)
-            console.log(`  ℹ️ ${extension.name} appears to be self-executing`);
-          }
-          console.log(`  ✅ ${extension.name} executed successfully`);
-        } catch (onloadError) {
-          console.log(`  ❌ ${extension.name} onload error:`, onloadError);
-          console.log(`  Error message:`, onloadError.message);
-          console.log(`  Error stack:`, onloadError.stack);
-          throw onloadError;
-        } finally {
-          // Clean up global references after execution
-          delete window.extensionAPI;
-          delete window._extensionAPI;
-          if (window.roamExtensions) {
-            delete window.roamExtensions.extensionAPI;
-          }
-        }
-
-        // Store for cleanup
-        loadedExtensions.set(extId, {
-          name: extension.name,
-          module: module.default,
-        });
-
-        updateExtensionStatus(extId, "success");
-        logMessage(`✅ ${extension.name} installed successfully!`, "success");
+        logMessage(`🎯 Executing standard onload: ${extension.name}`);
+        await module.default.onload({ extensionAPI: mockAPI });
+        executed = true;
+      } else if (module.onload) {
+        logMessage(`🎯 Executing named onload: ${extension.name}`);
+        await module.onload({ extensionAPI: mockAPI });
+        executed = true;
+      } else if (typeof module.default === "function") {
+        logMessage(`🎯 Executing function export: ${extension.name}`);
+        await module.default({ extensionAPI: mockAPI });
+        executed = true;
       } else {
-        throw new Error("Invalid extension format");
+        // Self-executing extension (like Weekly Bandaid)
+        logMessage(`🎯 Self-executing extension detected: ${extension.name}`);
+        executed = true;
       }
+
+      // Clean up global API references
+      delete window.extensionAPI;
+      delete window._extensionAPI;
+      delete window.roamExtensions.extensionAPI;
+
+      // Store for unload
+      loadedExtensions.set(extId, {
+        name: extension.name,
+        module: module.default || module,
+        executed,
+      });
+
+      updateExtensionStatus(extId, "success");
+      logMessage(`✅ ${extension.name} installed successfully!`, "success");
     } finally {
+      // Always clean up blob URL
       URL.revokeObjectURL(blobUrl);
     }
   } catch (error) {
+    console.error(`❌ ${extension.name} failed:`, error);
     updateExtensionStatus(extId, "error");
     logMessage(`❌ ${extension.name} failed: ${error.message}`, "error");
+    throw error; // Re-throw for caller handling
   }
 }
 
-// Auto-install all extensions in sequence
+// Auto-install all extensions
 async function autoInstallAll() {
   const autoBtn = document.getElementById("auto-install-btn");
-  autoBtn.textContent = "🔄 Installing...";
-  autoBtn.disabled = true;
-
-  logMessage("🚀 Starting auto-installation...");
-
-  for (const extension of CALENDAR_EXTENSIONS) {
-    await installExtension(extension.id);
-    // Small delay between installations
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  if (autoBtn) {
+    autoBtn.disabled = true;
+    autoBtn.textContent = "Installing...";
   }
 
-  const successCount = loadedExtensions.size;
-  const totalCount = CALENDAR_EXTENSIONS.length;
+  logMessage("🚀 Starting auto-installation of all extensions...");
 
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (const extension of CALENDAR_EXTENSIONS) {
+    try {
+      await installExtension(extension.id);
+      successCount++;
+      // Small delay to prevent overwhelming
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch (error) {
+      failureCount++;
+      logMessage(`⚠️ Continuing despite ${extension.name} failure...`);
+    }
+  }
+
+  // Final report
+  const totalCount = CALENDAR_EXTENSIONS.length;
   if (successCount === totalCount) {
     logMessage(
       `🎉 Auto-installation complete! All ${successCount} extensions loaded.`,
       "success"
     );
-    autoBtn.textContent = "✅ All Installed";
   } else {
     logMessage(
-      `⚠️ Installation complete with issues. ${successCount}/${totalCount} extensions loaded.`,
-      "error"
+      `⚠️ Auto-installation finished: ${successCount}/${totalCount} successful, ${failureCount} failed.`
     );
-    autoBtn.textContent = `⚠️ ${successCount}/${totalCount} Installed`;
+  }
+
+  if (autoBtn) {
     autoBtn.disabled = false;
+    autoBtn.textContent = "Auto-Install All Extensions";
   }
 }
 
-// Show installer modal
-function showInstaller() {
-  closeInstaller(); // Close any existing installer
-  installerModal = createInstallerModal();
+// Create installer modal UI
+function createInstallerModal() {
+  const modalHTML = `
+    <div id="calendar-installer-modal" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    ">
+      <div style="
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      ">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="margin: 0 0 8px 0; color: #212529; font-size: 24px;">📅 Calendar Suite Installer</h2>
+          <p style="margin: 0; color: #6c757d; font-size: 14px;">Load all Calendar Suite extensions with one click</p>
+        </div>
+        
+        <button id="auto-install-btn" style="
+          width: 100%;
+          padding: 12px 24px;
+          background: linear-gradient(135deg, #845ec2, #6c5ce7);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-bottom: 20px;
+          transition: all 0.2s;
+        " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+          Auto-Install All Extensions
+        </button>
+        
+        <div style="margin-bottom: 20px;">
+          ${CALENDAR_EXTENSIONS.map(
+            (ext) => `
+            <div id="ext-${ext.id}" style="
+              display: flex;
+              align-items: center;
+              padding: 12px;
+              border: 1px solid #e9ecef;
+              border-radius: 8px;
+              margin-bottom: 8px;
+              transition: all 0.2s;
+            ">
+              <span class="status-icon" style="font-size: 16px; margin-right: 12px;">⭕</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #212529; margin-bottom: 2px;">
+                  ${ext.name}${ext.critical ? " ⚡" : ""}
+                </div>
+                <div style="font-size: 12px; color: #6c757d;">${
+                  ext.description
+                }</div>
+              </div>
+              <button data-ext-id="${ext.id}" class="install-btn" style="
+                padding: 6px 16px;
+                background: linear-gradient(135deg, #51cf66, #40c057);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                min-width: 70px;
+                transition: all 0.2s;
+              ">Install</button>
+            </div>
+          `
+          ).join("")}
+        </div>
+        
+        <details style="margin-bottom: 20px;">
+          <summary style="cursor: pointer; font-weight: 600; color: #495057; margin-bottom: 8px;">
+            📋 Installation Log
+          </summary>
+          <div id="cal-install-log" style="
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+          "></div>
+        </details>
+        
+        <div style="text-align: right;">
+          <button id="close-installer-btn" style="
+            padding: 8px 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+          ">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", modalHTML);
+  installerModal = document.getElementById("calendar-installer-modal");
+
+  // Event listeners
+  document
+    .getElementById("auto-install-btn")
+    .addEventListener("click", autoInstallAll);
+  document
+    .getElementById("close-installer-btn")
+    .addEventListener("click", closeInstaller);
+
+  // Add event listeners for individual install buttons
+  document.querySelectorAll(".install-btn").forEach((button) => {
+    const extId = button.getAttribute("data-ext-id");
+    button.addEventListener("click", () => installExtension(extId));
+  });
+
+  // Close on backdrop click
+  installerModal.addEventListener("click", (e) => {
+    if (e.target === installerModal) {
+      closeInstaller();
+    }
+  });
+
+  logMessage("📱 Calendar Suite Installer opened");
 }
 
-// Add installer button to Roam interface
+// Close installer modal
+function closeInstaller() {
+  if (installerModal) {
+    installerModal.remove();
+    installerModal = null;
+  }
+}
+
+// Add installer button to Roam
 function addInstallerButton() {
-  // Don't add if already exists
-  if (document.getElementById("calendar-installer-btn")) return;
+  const button = document.createElement("button");
+  button.id = "calendar-installer-btn";
+  button.textContent = "📅 Install Calendar Suite";
+  button.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #845ec2, #6c5ce7);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s;
+  `;
 
-  // Find Roam's top bar
-  const topBar =
-    document.querySelector(".roam-topbar") ||
-    document.querySelector(".rm-topbar") ||
-    document.querySelector('[data-testid="topbar"]');
-  if (!topBar) {
-    console.warn("⚠️ Could not find Roam's top bar to add installer button");
-    return;
-  }
-
-  // Create installer button
-  const installerBtn = document.createElement("button");
-  installerBtn.id = "calendar-installer-btn";
-  installerBtn.innerHTML = "🗓️ Calendar Suite";
-  installerBtn.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 6px 12px;
-        margin: 0 8px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        transition: all 0.3s ease;
-    `;
-
-  // Hover effects
-  installerBtn.addEventListener("mouseenter", () => {
-    installerBtn.style.transform = "translateY(-1px)";
-    installerBtn.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+  button.addEventListener("click", createInstallerModal);
+  button.addEventListener("mouseover", () => {
+    button.style.transform = "translateY(-1px)";
+    button.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
   });
-  installerBtn.addEventListener("mouseleave", () => {
-    installerBtn.style.transform = "translateY(0)";
-    installerBtn.style.boxShadow = "0 2px 8px rgba(102, 126, 234, 0.3)";
+  button.addEventListener("mouseout", () => {
+    button.style.transform = "translateY(0)";
+    button.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
   });
 
-  // Click to show installer
-  installerBtn.addEventListener("click", showInstaller);
-
-  // Add to top bar
-  const container = document.createElement("div");
-  container.appendChild(installerBtn);
-  topBar.appendChild(container);
-
-  console.log("✅ Calendar Suite installer button added to top bar");
+  document.body.appendChild(button);
+  console.log("📅 Calendar Suite Installer button added");
 }
 
 // Main extension export
 export default {
-  onload: () => {
-    console.log("🗓️ Calendar Suite Installer loaded!");
+  onload: async ({ extensionAPI }) => {
+    console.log("🚀 Calendar Suite Installer Loading...");
 
-    // Add installer button to Roam interface
+    // Reset state
+    loadedExtensions.clear();
+    installLog = [];
+
+    // Add installer button
     addInstallerButton();
 
-    // Show installer immediately for first-time users
-    setTimeout(() => {
-      if (loadedExtensions.size === 0) {
-        showInstaller();
-      }
-    }, 2000);
+    console.log("✅ Calendar Suite Installer Ready!");
   },
 
   onunload: () => {
-    console.log("🧹 Calendar Suite Installer unloading...");
+    console.log("🔄 Calendar Suite Installer Unloading...");
 
     // Unload all installed extensions
     loadedExtensions.forEach((ext, id) => {
       try {
         if (ext.module?.onunload) {
+          console.log(`🔄 Unloading ${ext.name}...`);
           ext.module.onunload();
-          console.log(`✅ ${ext.name} unloaded`);
         }
       } catch (error) {
         console.warn(`⚠️ Error unloading ${ext.name}:`, error);
@@ -608,10 +550,13 @@ export default {
     closeInstaller();
     const installerBtn = document.getElementById("calendar-installer-btn");
     if (installerBtn) {
-      installerBtn.parentElement.remove();
+      installerBtn.remove();
     }
 
+    // Reset state
     loadedExtensions.clear();
-    console.log("✅ Calendar Suite Installer unloaded");
+    installLog = [];
+
+    console.log("✅ Calendar Suite Installer Unloaded");
   },
 };

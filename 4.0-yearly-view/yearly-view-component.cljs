@@ -1,10 +1,10 @@
-// ===================================================================
-// 🗓️ YEARLY VIEW EXTENSION 2.0 - STEP 6: REAL COMPONENT DEPLOYMENT
-// ===================================================================
+;; ===================================================================
+;; 🗓️ YEARLY VIEW EXTENSION 2.0 - STEP 6: REAL COMPONENT DEPLOYMENT
+;; ===================================================================
 
-// ===================================================================
-// 🧪 DEPENDENCY VERIFICATION SYSTEM
-// ===================================================================
+;; ===================================================================
+;; 🧪 DEPENDENCY VERIFICATION SYSTEM
+;; ===================================================================
 
 function checkRequiredDependencies() {
   console.log("🔍 Checking required dependencies...");
@@ -46,9 +46,9 @@ function checkRequiredDependencies() {
   return true;
 }
 
-// ===================================================================
-// 🏷️ TAG CONFIGURATION LOADING (FROM STEP 5)
-// ===================================================================
+;; ===================================================================
+;; 🏷️ TAG CONFIGURATION LOADING (FROM STEP 5)
+;; ===================================================================
 
 async function loadYearlyTagConfiguration() {
   console.log("🏷️ Loading yearly tag configuration from UnifiedConfigUtils...");
@@ -58,7 +58,7 @@ async function loadYearlyTagConfiguration() {
       throw new Error("UnifiedConfigUtils required for tag configuration");
     }
 
-    // Get list of yearly tag IDs
+    ;; Get list of yearly tag IDs
     const yearlyTags = window.UnifiedConfigUtils.getYearlyTags();
     console.log("📋 Available yearly tag IDs:", yearlyTags);
 
@@ -67,7 +67,7 @@ async function loadYearlyTagConfiguration() {
       return {};
     }
 
-    // Load configuration for each tag
+    ;; Load configuration for each tag
     const tagConfigs = {};
 
     for (const tagId of yearlyTags) {
@@ -77,7 +77,7 @@ async function loadYearlyTagConfiguration() {
         console.log(`✅ Loaded config for #${tagId}:`, tagConfig);
       } catch (error) {
         console.error(`❌ Failed to load config for #${tagId}:`, error);
-        // Continue with other tags even if one fails
+        ;; Continue with other tags even if one fails
       }
     }
 
@@ -86,7 +86,7 @@ async function loadYearlyTagConfiguration() {
     console.log("Configuration data:", tagConfigs);
     console.groupEnd();
 
-    // Store configuration globally for component access
+    ;; Store configuration globally for component access
     window._yearlyViewTagConfigs = tagConfigs;
 
     return tagConfigs;
@@ -97,13 +97,13 @@ async function loadYearlyTagConfiguration() {
 }
 
 function getStoredTagConfiguration() {
-  // Helper function to retrieve stored tag configuration
+  ;; Helper function to retrieve stored tag configuration
   return window._yearlyViewTagConfigs || {};
 }
 
-// ===================================================================
-// 🌐 EXTERNAL CLOJURESCRIPT ASSET FETCHING (NEW FOR STEP 6)
-// ===================================================================
+;; ===================================================================
+;; 🌐 EXTERNAL CLOJURESCRIPT ASSET FETCHING (NEW FOR STEP 6)
+;; ===================================================================
 
 async function fetchClojureScriptComponent() {
   console.log("🌐 Fetching real ClojureScript component from GitHub...");
@@ -121,7 +121,7 @@ async function fetchClojureScriptComponent() {
     
     const clojureScriptCode = await response.text();
     
-    // Basic validation
+    ;; Basic validation
     if (!clojureScriptCode || clojureScriptCode.length < 100) {
       throw new Error("Fetched content appears to be invalid or empty");
     }
@@ -133,7 +133,7 @@ async function fetchClojureScriptComponent() {
     console.log("✅ Successfully fetched ClojureScript component");
     console.log(`📊 Component size: ${clojureScriptCode.length} characters`);
     
-    // Wrap in code block for Roam
+    ;; Wrap in code block for Roam
     const componentCode = `\`\`\`clojure\n${clojureScriptCode}\n\`\`\``;
     
     return componentCode;
@@ -141,7 +141,7 @@ async function fetchClojureScriptComponent() {
   } catch (error) {
     console.error("❌ Failed to fetch ClojureScript component:", error);
     
-    // Return fallback component with error information
+    ;; Return fallback component with error information
     const fallbackComponent = `\`\`\`clojure
 (ns yearly-view-v2.fallback)
 
@@ -176,15 +176,15 @@ async function fetchClojureScriptComponent() {
   }
 }
 
-// ===================================================================
-// 🎯 SMART CALENDAR DEPLOYMENT FUNCTIONS (FROM STEP 4)
-// ===================================================================
+;; ===================================================================
+;; 🎯 SMART CALENDAR DEPLOYMENT FUNCTIONS (FROM STEP 4)
+;; ===================================================================
 
 async function checkIfYearlyCalendarExists(pageTitle) {
   console.log(`🔍 Checking if yearly calendar exists on [[${pageTitle}]]...`);
 
   try {
-    // Query for blocks containing "Yearly view is below:" on the specific page
+    ;; Query for blocks containing "Yearly view is below:" on the specific page
     const query = `[:find ?uid ?string :where 
                     [?page :node/title "${pageTitle}"] 
                     [?block :block/page ?page] 
@@ -205,7 +205,7 @@ async function checkIfYearlyCalendarExists(pageTitle) {
     }
   } catch (error) {
     console.error("❌ Error checking for existing calendar:", error);
-    return false; // Assume doesn't exist on error
+    return false; ; Assume doesn't exist on error
   }
 }
 
@@ -213,7 +213,7 @@ async function deployYearlyCalendarToPage(pageTitle) {
   console.log(`🚀 Deploying yearly calendar to [[${pageTitle}]]...`);
 
   try {
-    // Step 1: Get or create year page
+    ;; Step 1: Get or create year page
     let yearPageUid = window.CalendarUtilities.RoamUtils.getPageUid(pageTitle);
     if (!yearPageUid) {
       console.log(`📄 Creating new page: [[${pageTitle}]]`);
@@ -222,7 +222,7 @@ async function deployYearlyCalendarToPage(pageTitle) {
       );
     }
 
-    // Step 2: Create parent block "**Yearly view is below:**"
+    ;; Step 2: Create parent block "**Yearly view is below:**"
     const parentBlockUid = window.CalendarUtilities.RoamUtils.generateUID();
     await window.roamAlphaAPI.data.block.create({
       location: { "parent-uid": yearPageUid, order: 0 },
@@ -231,7 +231,7 @@ async function deployYearlyCalendarToPage(pageTitle) {
 
     console.log(`✅ Created parent block: ${parentBlockUid}`);
 
-    // Step 3: Create child block with render component
+    ;; Step 3: Create child block with render component
     const renderBlockUid = window.CalendarUtilities.RoamUtils.generateUID();
     const componentUid = getComponentUid();
 
@@ -248,7 +248,7 @@ async function deployYearlyCalendarToPage(pageTitle) {
       `✅ Yearly calendar successfully deployed to [[${pageTitle}]]!`
     );
 
-    // Show success message to user
+    ;; Show success message to user
     setTimeout(() => {
       alert(
         `✅ Yearly calendar added to [[${pageTitle}]]!\n\nThe interactive calendar is now available on your year page.`
@@ -262,7 +262,7 @@ async function deployYearlyCalendarToPage(pageTitle) {
       error
     );
 
-    // Show error message to user
+    ;; Show error message to user
     setTimeout(() => {
       alert(
         `❌ Failed to add yearly calendar to [[${pageTitle}]]:\n\n${error.message}\n\nCheck the console for detailed information.`
@@ -280,7 +280,7 @@ async function handleYearPageDetected(pageTitle) {
   console.log("✅ Valid year detected");
 
   try {
-    // CRITICAL: Check if yearly calendar already exists FIRST
+    ;; CRITICAL: Check if yearly calendar already exists FIRST
     const calendarExists = await checkIfYearlyCalendarExists(pageTitle);
 
     if (calendarExists) {
@@ -288,10 +288,10 @@ async function handleYearPageDetected(pageTitle) {
         `🔇 Silent operation: Yearly calendar already exists on [[${pageTitle}]]`
       );
       console.groupEnd();
-      return; // Silent - do nothing
+      return; ; Silent - do nothing
     }
 
-    // Only prompt if calendar doesn't exist
+    ;; Only prompt if calendar doesn't exist
     console.log("🔔 Prompting user to add yearly calendar...");
 
     setTimeout(async () => {
@@ -314,24 +314,24 @@ async function handleYearPageDetected(pageTitle) {
       }
 
       console.groupEnd();
-    }, 100); // Small delay to avoid blocking page navigation
+    }, 100); ; Small delay to avoid blocking page navigation
   } catch (error) {
     console.error("❌ Error in year page detection:", error);
     console.groupEnd();
   }
 }
 
-// ===================================================================
-// 🏗️ REAL COMPONENT DEPLOYMENT (STEP 6 - UPDATED)
-// ===================================================================
+;; ===================================================================
+;; 🏗️ REAL COMPONENT DEPLOYMENT (STEP 6 - UPDATED)
+;; ===================================================================
 
 function getComponentUid() {
-  // Return the UID of the deployed component
+  ;; Return the UID of the deployed component
   if (window._yearlyViewComponentUid) {
     return window._yearlyViewComponentUid;
   }
 
-  // If not stored, try to find it
+  ;; If not stored, try to find it
   const existingComponent = findExistingYearlyViewComponent();
   if (existingComponent) {
     window._yearlyViewComponentUid = existingComponent.uid;
@@ -346,13 +346,13 @@ function getComponentUid() {
 function findExistingYearlyViewComponent() {
   console.log("🔍 Searching for existing Yearly View 2.0 component...");
 
-  // Search patterns for both old and new components
+  ;; Search patterns for both old and new components
   const searchStrings = [
-    // New real component patterns
+    ;; New real component patterns
     "yearly-view-v2.core",
     "Interactive Yearly Calendar",
     "defn yearly-view",
-    // Old placeholder patterns (for backwards compatibility)
+    ;; Old placeholder patterns (for backwards compatibility)
     "Hello, World! I am the Yearly View 2.0 placeholder component",
     "ns yearlyview2.hello",
     "defn main",
@@ -378,22 +378,22 @@ function findExistingYearlyViewComponent() {
 async function deployYearlyViewComponent() {
   console.log("🚀 Deploying real Yearly View component...");
 
-  // Check for existing component first
+  ;; Check for existing component first
   const existing = findExistingYearlyViewComponent();
   if (existing) {
     console.log("🔄 Component already exists, checking if it needs updating...");
     
-    // Check if it's the old placeholder
+    ;; Check if it's the old placeholder
     const existingBlock = window.roamAlphaAPI.q(`[:find ?string . :where [?b :block/uid "${existing.uid}"] [?b :block/string ?string]]`);
     
     if (existingBlock && existingBlock.includes("Hello, World!")) {
       console.log("📦 Found old placeholder component, updating to real component...");
       
       try {
-        // Fetch the real component
+        ;; Fetch the real component
         const realComponentCode = await fetchClojureScriptComponent();
         
-        // Update the existing block with the real component
+        ;; Update the existing block with the real component
         await window.roamAlphaAPI.data.block.update({
           block: { uid: existing.uid, string: realComponentCode }
         });
@@ -401,7 +401,7 @@ async function deployYearlyViewComponent() {
         console.log("✅ Successfully updated placeholder to real component!");
         window._yearlyViewComponentUid = existing.uid;
         
-        // Show success message
+        ;; Show success message
         setTimeout(() => {
           alert(
             "🎉 Yearly View Component Updated!\n\n" +
@@ -424,14 +424,14 @@ async function deployYearlyViewComponent() {
     }
   }
 
-  // Deploy new component
+  ;; Deploy new component
   console.log("🆕 Deploying new real component...");
   
   try {
-    // Fetch the real component from GitHub
+    ;; Fetch the real component from GitHub
     const componentCode = await fetchClojureScriptComponent();
 
-    // Get or create roam/render page with proper error checking
+    ;; Get or create roam/render page with proper error checking
     let currentUid =
       window.CalendarUtilities.RoamUtils.getPageUid("roam/render");
     console.log("🔍 roam/render page UID:", currentUid);
@@ -442,25 +442,25 @@ async function deployYearlyViewComponent() {
       console.log("📄 Created roam/render page UID:", currentUid);
     }
 
-    // Verify we have a valid UID
+    ;; Verify we have a valid UID
     if (!currentUid || typeof currentUid !== "string") {
       throw new Error(
         `Failed to get valid roam/render page UID. Got: ${currentUid}`
       );
     }
 
-    // Create the hierarchy step by step using actual Roam API
+    ;; Create the hierarchy step by step using actual Roam API
     const hierarchy = [
       "**Components added by Extensions:**",
       "**Added by Calendar Suite extension:**",
       "**Yearly View 2.0:**",
     ];
 
-    // Build hierarchy
+    ;; Build hierarchy
     for (const level of hierarchy) {
       console.log(`🏗️ Building hierarchy level: "${level}"`);
 
-      // Check if this level already exists as a child of currentUid
+      ;; Check if this level already exists as a child of currentUid
       const query = `[:find ?uid :where 
                       [?parent :block/uid "${currentUid}"] 
                       [?child :block/parents ?parent] 
@@ -475,7 +475,7 @@ async function deployYearlyViewComponent() {
           `✅ Found existing level "${level}" with UID: ${currentUid}`
         );
       } else {
-        // Create new block
+        ;; Create new block
         const newBlockUid = window.CalendarUtilities.RoamUtils.generateUID();
         console.log(
           `🆕 Creating new level "${level}" with UID: ${newBlockUid}`
@@ -491,7 +491,7 @@ async function deployYearlyViewComponent() {
       }
     }
 
-    // Create the component block
+    ;; Create the component block
     const componentUid = window.CalendarUtilities.RoamUtils.generateUID();
     console.log(`🎯 Creating component block with UID: ${componentUid}`);
 
@@ -503,7 +503,7 @@ async function deployYearlyViewComponent() {
     console.log("✅ Real component deployed successfully");
     window._yearlyViewComponentUid = componentUid;
 
-    // Show success message
+    ;; Show success message
     setTimeout(() => {
       alert(
         "🎉 Real Yearly View Component Deployed!\n\n" +
@@ -523,9 +523,9 @@ async function deployYearlyViewComponent() {
   }
 }
 
-// ===================================================================
-// 🎯 ENHANCED PAGE DETECTION SYSTEM (FROM STEP 4)
-// ===================================================================
+;; ===================================================================
+;; 🎯 ENHANCED PAGE DETECTION SYSTEM (FROM STEP 4)
+;; ===================================================================
 
 function setupCentralPageDetection() {
   console.log("🎯 Setting up central page detection...");
@@ -538,12 +538,12 @@ function setupCentralPageDetection() {
   }
 
   try {
-    // Register year page detection with smart deployment callback
+    ;; Register year page detection with smart deployment callback
     const unregisterYearListener =
       window.CalendarSuite.pageDetector.registerPageListener(
-        "yearly-view-year-pages", // label
+        "yearly-view-year-pages", ; label
         (pageTitle) => {
-          // matcher function
+          ;; matcher function
           const yearMatch = /^\d{4}$/.test(pageTitle);
           if (yearMatch) {
             const year = parseInt(pageTitle);
@@ -557,10 +557,10 @@ function setupCentralPageDetection() {
           }
           return false;
         },
-        handleYearPageDetected // Use smart deployment callback
+        handleYearPageDetected ; Use smart deployment callback
       );
 
-    // Register cleanup function
+    ;; Register cleanup function
     if (window.CalendarSuite?.dispatchToRegistry) {
       window.CalendarSuite.dispatchToRegistry({
         customCleanups: [unregisterYearListener],
@@ -585,9 +585,9 @@ function setupCentralPageDetection() {
   }
 }
 
-// ===================================================================
-// 🏗️ CALENDAR FOUNDATION INTEGRATION (FROM STEPS 1-5)
-// ===================================================================
+;; ===================================================================
+;; 🏗️ CALENDAR FOUNDATION INTEGRATION (FROM STEPS 1-5)
+;; ===================================================================
 
 function registerWithCalendarFoundation() {
   console.log("🏗️ Registering with Calendar Foundation...");
@@ -628,9 +628,9 @@ function registerWithCalendarFoundation() {
   }
 }
 
-// ===================================================================
-// 🎛️ ENHANCED COMMAND PALETTE SYSTEM (UPDATED FOR STEP 6)
-// ===================================================================
+;; ===================================================================
+;; 🎛️ ENHANCED COMMAND PALETTE SYSTEM (UPDATED FOR STEP 6)
+;; ===================================================================
 
 function setupBasicCommands() {
   console.log("🎛️ Setting up command palette...");
@@ -729,7 +729,7 @@ function setupBasicCommands() {
               return;
             }
 
-            // Display fresh configuration
+            ;; Display fresh configuration
             console.log("✅ Fresh configuration loaded:");
             for (const [tagId, config] of Object.entries(freshConfigs)) {
               console.log(`#${tagId}:`, config);
@@ -745,7 +745,7 @@ function setupBasicCommands() {
                 .join(", ")}`
             );
           } else {
-            // Display stored configuration
+            ;; Display stored configuration
             console.log("✅ Currently stored configuration:");
             for (const [tagId, config] of Object.entries(storedConfigs)) {
               console.log(`#${tagId}:`, config);
@@ -841,7 +841,7 @@ function setupBasicCommands() {
           return;
         }
 
-        // Get page title from UID
+        ;; Get page title from UID
         const query = `[:find ?title :where [?page :block/uid "${currentPageUid}"] [?page :node/title ?title]]`;
         const result = window.roamAlphaAPI.q(query);
         const pageTitle = result?.[0]?.[0];
@@ -864,7 +864,7 @@ function setupBasicCommands() {
         }
       },
     },
-    // NEW COMMANDS FOR STEP 6
+    ;; NEW COMMANDS FOR STEP 6
     {
       label: "Yearly View: Update Component from GitHub",
       callback: async () => {
@@ -891,7 +891,7 @@ function setupBasicCommands() {
         try {
           const componentUid = getComponentUid();
           
-          // Get the actual component content
+          ;; Get the actual component content
           const query = `[:find ?string . :where [?b :block/uid "${componentUid}"] [?b :block/string ?string]]`;
           const componentContent = window.roamAlphaAPI.q(query);
           
@@ -931,7 +931,7 @@ function setupBasicCommands() {
     },
   ];
 
-  // Register commands
+  ;; Register commands
   for (const cmd of commands) {
     window.roamAlphaAPI.ui.commandPalette.addCommand({
       label: cmd.label,
@@ -943,9 +943,9 @@ function setupBasicCommands() {
   return commands;
 }
 
-// ===================================================================
-// 🚀 MAIN EXTENSION OBJECT
-// ===================================================================
+;; ===================================================================
+;; 🚀 MAIN EXTENSION OBJECT
+;; ===================================================================
 
 const extension = {
   onload: async () => {
@@ -955,19 +955,19 @@ const extension = {
     console.log("🚀 Loading extension with real ClojureScript component...");
 
     try {
-      // Step 1: Verify all dependencies
+      ;; Step 1: Verify all dependencies
       checkRequiredDependencies();
 
-      // Step 2: Deploy or find real component (UPDATED)
+      ;; Step 2: Deploy or find real component (UPDATED)
       const componentResult = await deployYearlyViewComponent();
 
-      // Step 3: Register with Calendar Foundation
+      ;; Step 3: Register with Calendar Foundation
       const foundationRegistered = registerWithCalendarFoundation();
 
-      // Step 4: Setup page detection with smart deployment
+      ;; Step 4: Setup page detection with smart deployment
       const pageDetectionSetup = setupCentralPageDetection();
 
-      // Step 5: Load tag configuration
+      ;; Step 5: Load tag configuration
       console.log("🏷️ Loading yearly tag configuration...");
       let tagConfigResult;
 
@@ -985,13 +985,13 @@ const extension = {
           success: false,
           error: tagError.message,
         };
-        // Don't fail extension load if tags aren't configured yet
+        ;; Don't fail extension load if tags aren't configured yet
       }
 
-      // Step 6: Setup command palette
+      ;; Step 6: Setup command palette
       const commands = setupBasicCommands();
 
-      // Final status report
+      ;; Final status report
       console.log("");
       console.log("🎉 Yearly View Extension 2.0 - Step 6 loaded successfully!");
       console.log("📊 Status Summary:");
@@ -1057,5 +1057,5 @@ const extension = {
   },
 };
 
-// Export for Roam
+;; Export for Roam
 export default extension;
