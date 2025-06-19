@@ -12,6 +12,7 @@ class CalendarTagCSSHandler {
     this.styleElement = null;
     this.configPageTitle = "roam/ext/calendar suite/config";
     this.currentConfig = {};
+    this.mutationObserver = null;
   }
 
   async loadConfiguration() {
@@ -110,6 +111,40 @@ class CalendarTagCSSHandler {
     }
   }
 
+  cleanup() {
+    // Remove CSS
+    if (this.styleElement) {
+      this.styleElement.remove();
+      this.styleElement = null;
+    }
+
+    // Remove mutation observer
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
+
+    // Remove deadline event listeners
+    const allTags = document.querySelectorAll("span.rm-page-ref--tag");
+    allTags.forEach((tagElement) => {
+      if (tagElement._deadlineHoverHandler) {
+        tagElement.removeEventListener(
+          "mouseenter",
+          tagElement._deadlineHoverHandler
+        );
+        delete tagElement._deadlineHoverHandler;
+      }
+    });
+  }
+
+  async reload() {
+    // Clean up existing setup
+    this.cleanup();
+
+    // Reinitialize everything
+    return await this.initialize();
+  }
+
   generateCSS() {
     const enabledTags = Object.entries(this.currentConfig).filter(
       ([tag, config]) => config.enabled
@@ -127,6 +162,11 @@ class CalendarTagCSSHandler {
     );
     const afterSelectors = enabledTags.map(
       ([tag]) => `span.rm-page-ref--tag[data-tag="${tag}"]:hover::after`
+    );
+
+    // Identify deadline tags for special behavior
+    const deadlineTags = enabledTags.filter(([tag, config]) =>
+      /deadline/i.test(config.label)
     );
 
     let css = `
@@ -188,6 +228,8 @@ ${afterSelectors.join(",\n")} {
 
     // Individual tag rules with circular badge styling
     enabledTags.forEach(([tag, config]) => {
+      const isDeadline = /deadline/i.test(config.label);
+
       css += `
 /* ${config.label} (${tag}) */
 span.rm-page-ref--tag[data-tag="${tag}"]::before {
@@ -205,6 +247,27 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
   border-color: ${config.primaryColor};
 }
 `;
+
+      // Add special class for deadline tags
+      if (isDeadline) {
+        css += `
+span.rm-page-ref--tag[data-tag="${tag}"] {
+  position: relative;
+}
+span.rm-page-ref--tag[data-tag="${tag}"]:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+span.rm-page-ref--tag[data-tag="${tag}"].deadline-tag:hover::after {
+  content: attr(data-deadline-tooltip);
+}
+`;
+      }
     });
 
     return css;
@@ -235,12 +298,161 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
         window._calendarRegistry.elements.push(this.styleElement);
       }
 
+      // Setup deadline countdown functionality
+      this.setupDeadlineCountdown();
+
       const tagCount = Object.keys(this.currentConfig).length;
       console.log(`✅ Calendar tag CSS applied with ${tagCount} tags`);
       return true;
     } catch (error) {
       console.error("❌ Error injecting calendar tag CSS:", error);
       return false;
+    }
+  }
+
+  // ===================================================================
+  // 🎯 DEADLINE COUNTDOWN EASTER EGG
+  // ===================================================================
+
+  setupDeadlineCountdown() {
+    // Find all deadline tags and add event listeners
+    const deadlineTags = Object.entries(this.currentConfig)
+      .filter(([tag, config]) => /deadline/i.test(config.label))
+      .map(([tag]) => tag);
+
+    deadlineTags.forEach((tag) => {
+      const tagElements = document.querySelectorAll(
+        `span.rm-page-ref--tag[data-tag="${tag}"]`
+      );
+      tagElements.forEach((tagElement) => {
+        // Remove existing listener to prevent duplicates
+        tagElement.removeEventListener(
+          "mouseenter",
+          tagElement._deadlineHoverHandler
+        );
+
+        // Create and store the handler
+        tagElement._deadlineHoverHandler = () =>
+          this.handleDeadlineHover(tagElement, tag);
+        tagElement.addEventListener(
+          "mouseenter",
+          tagElement._deadlineHoverHandler
+        );
+      });
+    });
+  }
+
+  handleDeadlineHover(tagElement, tag) {
+    try {
+      // Find the containing block
+      const blockElement = tagElement.closest(".rm-block");
+      if (!blockElement) return;
+
+      // Get the block text content
+      const blockText =
+        blockElement.textContent || blockElement.innerText || "";
+
+      // Look for date pattern: [[Month Day, Year]]
+      const dateMatch = blockText.match(
+        /\[\[([A-Za-z]+)\s+(\d{1,2}(?:st|nd|rd|th)?),\s+(\d{4})\]\]/
+      );
+      if (!dateMatch) return;
+
+      const [, monthStr, dayStr, yearStr] = dateMatch;
+
+      // Parse the date
+      const targetDate = this.parseRoamDate(monthStr, dayStr, yearStr);
+      if (!targetDate) return;
+
+      // Calculate days remaining
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset to start of day
+
+      const timeDiff = targetDate.getTime() - today.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+      // Create enhanced tooltip
+      const config = this.currentConfig[tag];
+      let tooltipText = `${config.label} (#${tag})`;
+
+      if (daysDiff > 0) {
+        tooltipText += ` • ${daysDiff} day${
+          daysDiff === 1 ? "" : "s"
+        } remaining`;
+      } else if (daysDiff === 0) {
+        tooltipText += ` • Due today!`;
+      } else {
+        const overdueDays = Math.abs(daysDiff);
+        tooltipText += ` • ${overdueDays} day${
+          overdueDays === 1 ? "" : "s"
+        } overdue`;
+      }
+
+      // Update the tooltip
+      tagElement.setAttribute("data-deadline-tooltip", tooltipText);
+      tagElement.classList.add("deadline-tag");
+    } catch (error) {
+      // Graceful failure - just do nothing
+      console.debug("Deadline countdown failed gracefully:", error);
+    }
+  }
+
+  parseRoamDate(monthStr, dayStr, yearStr) {
+    try {
+      // Parse month name to number
+      const months = {
+        january: 0,
+        february: 1,
+        march: 2,
+        april: 3,
+        may: 4,
+        june: 5,
+        july: 6,
+        august: 7,
+        september: 8,
+        october: 9,
+        november: 10,
+        december: 11,
+        jan: 0,
+        feb: 1,
+        mar: 2,
+        apr: 3,
+        jun: 5,
+        jul: 6,
+        aug: 7,
+        sep: 8,
+        sept: 8,
+        oct: 9,
+        nov: 10,
+        dec: 11,
+      };
+
+      const monthIndex = months[monthStr.toLowerCase()];
+      if (monthIndex === undefined) return null;
+
+      // Parse day (remove ordinal suffix)
+      const day = parseInt(dayStr.replace(/(?:st|nd|rd|th)$/, ""), 10);
+      if (isNaN(day) || day < 1 || day > 31) return null;
+
+      // Parse year
+      const year = parseInt(yearStr, 10);
+      if (isNaN(year)) return null;
+
+      // Create date object
+      const date = new Date(year, monthIndex, day);
+
+      // Validate the date
+      if (
+        date.getFullYear() !== year ||
+        date.getMonth() !== monthIndex ||
+        date.getDate() !== day
+      ) {
+        return null;
+      }
+
+      return date;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -253,7 +465,11 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       const success = this.generateAndInjectCSS();
 
       if (success) {
-        console.log("✅ Dynamic calendar tag CSS initialized");
+        // Setup mutation observer for dynamically added tags
+        this.setupDynamicTagWatcher();
+        console.log(
+          "✅ Dynamic calendar tag CSS initialized with deadline countdown"
+        );
         return true;
       } else {
         return false;
@@ -261,6 +477,51 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
     } catch (error) {
       console.error("❌ Failed to initialize calendar tag CSS:", error);
       return false;
+    }
+  }
+
+  setupDynamicTagWatcher() {
+    // Watch for new tags being added to the page
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check if the added node contains deadline tags
+            const deadlineTagElements = node.querySelectorAll
+              ? node.querySelectorAll("span.rm-page-ref--tag")
+              : [];
+
+            deadlineTagElements.forEach((tagElement) => {
+              const tag = tagElement.getAttribute("data-tag");
+              if (
+                tag &&
+                this.currentConfig[tag] &&
+                /deadline/i.test(this.currentConfig[tag].label)
+              ) {
+                tagElement.addEventListener("mouseenter", () =>
+                  this.handleDeadlineHover(tagElement, tag)
+                );
+              }
+            });
+          }
+        });
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Store observer for cleanup
+    this.mutationObserver = observer;
+
+    // Register observer for cleanup
+    if (window._calendarRegistry) {
+      if (!window._calendarRegistry.observers) {
+        window._calendarRegistry.observers = [];
+      }
+      window._calendarRegistry.observers.push(observer);
     }
   }
 }
@@ -838,9 +1099,12 @@ function setupCommands() {
       label: "Calendar Tags: Reload Styling",
       callback: async () => {
         if (window._yearlyViewCSSHandler) {
-          await window._yearlyViewCSSHandler.loadConfiguration();
-          window._yearlyViewCSSHandler.generateAndInjectCSS();
-          alert("✅ Calendar tag styling reloaded!");
+          const success = await window._yearlyViewCSSHandler.reload();
+          alert(
+            success
+              ? "✅ Calendar tag styling reloaded with deadline countdown!"
+              : "⚠️ CSS reloaded but some features may not be active"
+          );
         } else {
           alert("❌ CSS Handler not initialized.");
         }
@@ -853,9 +1117,13 @@ function setupCommands() {
           const tagCount = Object.keys(
             window._yearlyViewCSSHandler.currentConfig
           ).length;
+          const deadlineCount = Object.entries(
+            window._yearlyViewCSSHandler.currentConfig
+          ).filter(([tag, config]) => /deadline/i.test(config.label)).length;
           const hasCSS = !!window._yearlyViewCSSHandler.styleElement;
+
           alert(
-            `📊 Calendar Tag Status:\n\n${tagCount} tags configured\nCSS ${
+            `📊 Calendar Tag Status:\n\n${tagCount} tags configured\n${deadlineCount} deadline tags with countdown\nCSS ${
               hasCSS ? "active" : "inactive"
             }\n\nSource: [[${window._yearlyViewCSSHandler.configPageTitle}]]`
           );
@@ -959,11 +1227,8 @@ const extension = {
     console.log("🗓️ Yearly View Extension 2.0: Unloading...");
 
     // Clean up CSS handler
-    if (
-      window._yearlyViewCSSHandler &&
-      window._yearlyViewCSSHandler.styleElement
-    ) {
-      window._yearlyViewCSSHandler.styleElement.remove();
+    if (window._yearlyViewCSSHandler) {
+      window._yearlyViewCSSHandler.cleanup();
     }
 
     // Clean up global references
