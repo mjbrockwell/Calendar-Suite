@@ -114,7 +114,7 @@ class CalendarTagCSSHandler {
 
   cleanup() {
     // Hide any active tooltip
-    this.hideDeadlineTooltip();
+    this.hideSmartTooltip();
 
     // Remove CSS
     if (this.styleElement) {
@@ -128,25 +128,25 @@ class CalendarTagCSSHandler {
       this.mutationObserver = null;
     }
 
-    // Remove deadline event listeners
+    // Remove smart tooltip event listeners from ALL tags
     const allTags = document.querySelectorAll("span.rm-page-ref--tag");
     allTags.forEach((tagElement) => {
-      if (tagElement._deadlineHandlers) {
+      if (tagElement._smartTooltipHandlers) {
         tagElement.removeEventListener(
           "mouseenter",
-          tagElement._deadlineHandlers.enter
+          tagElement._smartTooltipHandlers.enter
         );
         tagElement.removeEventListener(
           "mouseleave",
-          tagElement._deadlineHandlers.leave
+          tagElement._smartTooltipHandlers.leave
         );
-        delete tagElement._deadlineHandlers;
+        delete tagElement._smartTooltipHandlers;
       }
     });
 
     // Clean up any orphaned tooltips
     const orphanedTooltips = document.querySelectorAll(
-      ".yearly-view-deadline-tooltip"
+      ".yearly-view-smart-tooltip"
     );
     orphanedTooltips.forEach((tooltip) => {
       if (tooltip.parentNode) {
@@ -179,23 +179,12 @@ class CalendarTagCSSHandler {
       ([tag]) => `span.rm-page-ref--tag[data-tag="${tag}"]::before`
     );
 
-    // Separate deadline and non-deadline tags for different tooltip handling
-    const deadlineTags = enabledTags.filter(([tag, config]) =>
-      /deadline/i.test(config.label)
-    );
-    const nonDeadlineTags = enabledTags.filter(
-      ([tag, config]) => !/deadline/i.test(config.label)
-    );
-
-    const nonDeadlineAfterSelectors = nonDeadlineTags.map(
-      ([tag]) => `span.rm-page-ref--tag[data-tag="${tag}"]:hover::after`
-    );
-
     let css = `
 /* ===================================================================
- * 🎯 YEARLY VIEW - DYNAMIC CALENDAR TAG CSS WITH JS TOOLTIPS
+ * 🎯 YEARLY VIEW - DYNAMIC CALENDAR TAG CSS WITH SMART TOOLTIPS
  * Generated: ${new Date().toISOString()}
  * Source: [[${this.configPageTitle}]]
+ * All tags now have smart date countdown tooltips!
  * ===================================================================*/
 
 /* Base styling for all calendar tags - hide original text */
@@ -230,24 +219,8 @@ ${beforeSelectors.join(",\n")} {
   transition: all 0.2s ease;
 }
 
-/* CSS tooltips only for NON-deadline tags */
-${nonDeadlineAfterSelectors.join(",\n")} {
-  position: absolute;
-  top: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px !important;
-  z-index: 1000;
-  pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  border: 1px solid rgba(0,0,0,0.1);
-}
-
-/* Custom JavaScript tooltip styling */
-.yearly-view-deadline-tooltip {
+/* Smart JavaScript tooltip styling for ALL tags */
+.yearly-view-smart-tooltip {
   position: absolute;
   top: 0;
   left: 0;
@@ -266,7 +239,7 @@ ${nonDeadlineAfterSelectors.join(",\n")} {
   transition: opacity 0.2s ease;
 }
 
-.yearly-view-deadline-tooltip.visible {
+.yearly-view-smart-tooltip.visible {
   opacity: 1;
 }
 
@@ -274,8 +247,6 @@ ${nonDeadlineAfterSelectors.join(",\n")} {
 
     // Individual tag rules with circular badge styling
     enabledTags.forEach(([tag, config]) => {
-      const isDeadline = /deadline/i.test(config.label);
-
       css += `
 /* ${config.label} (${tag}) */
 span.rm-page-ref--tag[data-tag="${tag}"]::before {
@@ -286,18 +257,6 @@ span.rm-page-ref--tag[data-tag="${tag}"]::before {
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 `;
-
-      // Only add CSS tooltip for non-deadline tags
-      if (!isDeadline) {
-        css += `
-span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
-  content: "${config.label} (#${tag})";
-  background: ${config.secondaryColor};
-  color: ${config.primaryColor};
-  border-color: ${config.primaryColor};
-}
-`;
-      }
     });
 
     return css;
@@ -328,11 +287,13 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
         window._calendarRegistry.elements.push(this.styleElement);
       }
 
-      // Setup deadline countdown functionality
-      this.setupDeadlineCountdown();
+      // Setup smart tooltips for ALL tags
+      this.setupSmartTooltips();
 
       const tagCount = Object.keys(this.currentConfig).length;
-      console.log(`✅ Calendar tag CSS applied with ${tagCount} tags`);
+      console.log(
+        `✅ Calendar tag CSS applied with ${tagCount} tags (all with smart tooltips)`
+      );
       return true;
     } catch (error) {
       console.error("❌ Error injecting calendar tag CSS:", error);
@@ -341,21 +302,21 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
   }
 
   // ===================================================================
-  // 🎯 DEADLINE COUNTDOWN EASTER EGG - JAVASCRIPT TOOLTIPS
+  // 🎯 SMART TOOLTIPS FOR ALL CALENDAR TAGS
   // ===================================================================
 
-  setupDeadlineCountdown() {
-    console.log("🔍 DEBUG: setupDeadlineCountdown called");
+  setupSmartTooltips() {
+    console.log("🔍 DEBUG: setupSmartTooltips called for ALL tags");
     console.log("🔍 DEBUG: currentConfig:", this.currentConfig);
 
-    // Find all deadline tags and add event listeners
-    const deadlineTags = Object.entries(this.currentConfig)
-      .filter(([tag, config]) => /deadline/i.test(config.label))
+    // Get ALL enabled tags (not just deadline tags)
+    const allTags = Object.entries(this.currentConfig)
+      .filter(([tag, config]) => config.enabled)
       .map(([tag]) => tag);
 
-    console.log("🔍 DEBUG: Found deadline tags:", deadlineTags);
+    console.log("🔍 DEBUG: Setting up smart tooltips for tags:", allTags);
 
-    deadlineTags.forEach((tag) => {
+    allTags.forEach((tag) => {
       const tagElements = document.querySelectorAll(
         `span.rm-page-ref--tag[data-tag="${tag}"]`
       );
@@ -364,64 +325,72 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       );
 
       tagElements.forEach((tagElement) => {
-        console.log("🔍 DEBUG: Attaching tooltip to element:", tagElement);
-        this.attachDeadlineTooltip(tagElement, tag);
+        console.log(
+          "🔍 DEBUG: Attaching smart tooltip to element:",
+          tagElement
+        );
+        this.attachSmartTooltip(tagElement, tag);
       });
     });
   }
 
-  attachDeadlineTooltip(tagElement, tag) {
+  attachSmartTooltip(tagElement, tag) {
     console.log(
-      "🔍 DEBUG: attachDeadlineTooltip called for tag:",
+      "🔍 DEBUG: attachSmartTooltip called for tag:",
       tag,
       "element:",
       tagElement
     );
 
     // Remove existing listeners to prevent duplicates
-    if (tagElement._deadlineHandlers) {
+    if (tagElement._smartTooltipHandlers) {
       tagElement.removeEventListener(
         "mouseenter",
-        tagElement._deadlineHandlers.enter
+        tagElement._smartTooltipHandlers.enter
       );
       tagElement.removeEventListener(
         "mouseleave",
-        tagElement._deadlineHandlers.leave
+        tagElement._smartTooltipHandlers.leave
       );
     }
 
     // Create new handlers
     const enterHandler = (e) => {
       console.log("🔍 DEBUG: Mouse enter event fired for tag:", tag);
-      this.showDeadlineTooltip(e.target, tag);
+      this.showSmartTooltip(e.target, tag);
     };
     const leaveHandler = () => {
       console.log("🔍 DEBUG: Mouse leave event fired for tag:", tag);
-      this.hideDeadlineTooltip();
+      this.hideSmartTooltip();
     };
 
     // Store handlers for cleanup
-    tagElement._deadlineHandlers = { enter: enterHandler, leave: leaveHandler };
+    tagElement._smartTooltipHandlers = {
+      enter: enterHandler,
+      leave: leaveHandler,
+    };
 
     // Attach event listeners
     tagElement.addEventListener("mouseenter", enterHandler);
     tagElement.addEventListener("mouseleave", leaveHandler);
 
-    console.log("🔍 DEBUG: Event listeners attached successfully");
+    console.log(
+      "🔍 DEBUG: Smart tooltip event listeners attached successfully"
+    );
   }
 
-  showDeadlineTooltip(tagElement, tag) {
-    console.log("🔍 DEBUG: showDeadlineTooltip called for tag:", tag);
+  showSmartTooltip(tagElement, tag) {
+    console.log("🔍 DEBUG: showSmartTooltip called for tag:", tag);
     console.log("🔍 DEBUG: tagElement:", tagElement);
 
     try {
       // Hide any existing tooltip first
-      this.hideDeadlineTooltip();
+      this.hideSmartTooltip();
 
       // Get the tooltip content
-      console.log("🔍 DEBUG: Getting tooltip content...");
-      const tooltipContent = this.getDeadlineTooltipContent(tagElement, tag);
-      console.log("🔍 DEBUG: Tooltip content result:", tooltipContent);
+      console.log("🔍 DEBUG: Getting smart tooltip content...");
+      const tooltipContent = this.getSmartTooltipContent(tagElement, tag);
+      console.log("🔍 DEBUG: Smart tooltip content result:", tooltipContent);
 
       if (!tooltipContent) {
         console.log("🔍 DEBUG: No tooltip content, returning");
@@ -430,11 +399,11 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
 
       // Create tooltip element
       const tooltip = document.createElement("div");
-      tooltip.className = "yearly-view-deadline-tooltip";
+      tooltip.className = "yearly-view-smart-tooltip";
       tooltip.textContent = tooltipContent;
 
       console.log(
-        "🔍 DEBUG: Created tooltip element with content:",
+        "🔍 DEBUG: Created smart tooltip element with content:",
         tooltipContent
       );
 
@@ -449,11 +418,11 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
 
       // Add to page
       document.body.appendChild(tooltip);
-      console.log("🔍 DEBUG: Tooltip added to document body");
+      console.log("🔍 DEBUG: Smart tooltip added to document body");
 
       // Position the tooltip
       this.positionTooltip(tooltip, tagElement);
-      console.log("🔍 DEBUG: Tooltip positioned");
+      console.log("🔍 DEBUG: Smart tooltip positioned");
 
       // Store reference for cleanup
       this.currentTooltip = tooltip;
@@ -461,25 +430,25 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       // Fade in
       requestAnimationFrame(() => {
         tooltip.classList.add("visible");
-        console.log("🔍 DEBUG: Tooltip fade-in applied");
+        console.log("🔍 DEBUG: Smart tooltip fade-in applied");
       });
     } catch (error) {
       // Graceful failure - just do nothing
-      console.error("🔍 DEBUG: Deadline tooltip failed:", error);
+      console.error("🔍 DEBUG: Smart tooltip failed:", error);
     }
   }
 
-  hideDeadlineTooltip() {
-    console.log("🔍 DEBUG: hideDeadlineTooltip called");
+  hideSmartTooltip() {
+    console.log("🔍 DEBUG: hideSmartTooltip called");
     if (this.currentTooltip) {
-      console.log("🔍 DEBUG: Hiding existing tooltip");
+      console.log("🔍 DEBUG: Hiding existing smart tooltip");
       this.currentTooltip.classList.remove("visible");
 
       // Remove after fade out
       setTimeout(() => {
         if (this.currentTooltip && this.currentTooltip.parentNode) {
           this.currentTooltip.parentNode.removeChild(this.currentTooltip);
-          console.log("🔍 DEBUG: Tooltip removed from DOM");
+          console.log("🔍 DEBUG: Smart tooltip removed from DOM");
         }
         this.currentTooltip = null;
       }, 200);
@@ -516,8 +485,8 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
     console.log("🔍 DEBUG: Final position - left:", left, "top:", top);
   }
 
-  getDeadlineTooltipContent(tagElement, tag) {
-    console.log("🔍 DEBUG: getDeadlineTooltipContent called for tag:", tag);
+  getSmartTooltipContent(tagElement, tag) {
+    console.log("🔍 DEBUG: getSmartTooltipContent called for tag:", tag);
 
     try {
       // Find the containing block
@@ -602,7 +571,7 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       }
 
       if (!dateFound) {
-        console.log("🔍 DEBUG: No date found anywhere, using fallback tooltip");
+        console.log("🔍 DEBUG: No date found anywhere, using simple tooltip");
         // Fallback to normal tooltip
         const config = this.currentConfig[tag];
         return `${config.label} (#${tag})`;
@@ -623,13 +592,13 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       console.log("🔍 DEBUG: Parsed target date:", targetDate);
 
       if (!targetDate) {
-        console.log("🔍 DEBUG: Date parsing failed, using fallback tooltip");
+        console.log("🔍 DEBUG: Date parsing failed, using simple tooltip");
         // Fallback to normal tooltip
         const config = this.currentConfig[tag];
         return `${config.label} (#${tag})`;
       }
 
-      // Calculate days remaining
+      // Calculate days difference
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Reset to start of day
       console.log("🔍 DEBUG: Today:", today);
@@ -638,27 +607,26 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
       console.log("🔍 DEBUG: Time diff:", timeDiff, "Days diff:", daysDiff);
 
-      // Create enhanced tooltip
+      // Create smart tooltip with universal language
       const config = this.currentConfig[tag];
       let tooltipText = `${config.label} (#${tag})`;
 
       if (daysDiff > 0) {
-        tooltipText += ` • ${daysDiff} day${
-          daysDiff === 1 ? "" : "s"
-        } remaining`;
+        // Future event
+        tooltipText += ` • ${daysDiff} day${daysDiff === 1 ? "" : "s"} away`;
       } else if (daysDiff === 0) {
-        tooltipText += ` • Due today!`;
+        // Today
+        tooltipText += ` • Today!`;
       } else {
-        const overdueDays = Math.abs(daysDiff);
-        tooltipText += ` • ${overdueDays} day${
-          overdueDays === 1 ? "" : "s"
-        } overdue`;
+        // Past event
+        const pastDays = Math.abs(daysDiff);
+        tooltipText += ` • ${pastDays} day${pastDays === 1 ? "" : "s"} ago`;
       }
 
-      console.log("🔍 DEBUG: Final tooltip text:", tooltipText);
+      console.log("🔍 DEBUG: Final smart tooltip text:", tooltipText);
       return tooltipText;
     } catch (error) {
-      console.error("🔍 DEBUG: Error in getDeadlineTooltipContent:", error);
+      console.error("🔍 DEBUG: Error in getSmartTooltipContent:", error);
       // Graceful failure - return normal tooltip
       const config = this.currentConfig[tag];
       return config ? `${config.label} (#${tag})` : null;
@@ -736,7 +704,7 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
         // Setup mutation observer for dynamically added tags
         this.setupDynamicTagWatcher();
         console.log(
-          "✅ Dynamic calendar tag CSS initialized with deadline countdown"
+          "✅ Dynamic calendar tag CSS initialized with smart tooltips for ALL tags"
         );
         return true;
       } else {
@@ -754,31 +722,31 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            // Check if the added node contains deadline tags
-            const deadlineTagElements = node.querySelectorAll
+            // Check if the added node contains ANY calendar tags
+            const calendarTagElements = node.querySelectorAll
               ? node.querySelectorAll("span.rm-page-ref--tag")
               : [];
 
-            deadlineTagElements.forEach((tagElement) => {
+            calendarTagElements.forEach((tagElement) => {
               const tag = tagElement.getAttribute("data-tag");
               if (
                 tag &&
                 this.currentConfig[tag] &&
-                /deadline/i.test(this.currentConfig[tag].label)
+                this.currentConfig[tag].enabled
               ) {
-                this.attachDeadlineTooltip(tagElement, tag);
+                this.attachSmartTooltip(tagElement, tag);
               }
             });
 
-            // Also check if the node itself is a deadline tag
+            // Also check if the node itself is a calendar tag
             if (node.matches && node.matches("span.rm-page-ref--tag")) {
               const tag = node.getAttribute("data-tag");
               if (
                 tag &&
                 this.currentConfig[tag] &&
-                /deadline/i.test(this.currentConfig[tag].label)
+                this.currentConfig[tag].enabled
               ) {
-                this.attachDeadlineTooltip(node, tag);
+                this.attachSmartTooltip(node, tag);
               }
             }
           }
