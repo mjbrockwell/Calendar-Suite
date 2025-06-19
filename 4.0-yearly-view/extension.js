@@ -378,6 +378,571 @@ async function debugHierarchyCreation() {
 }
 
 // ===================================================================
+// 🔧 LOCAL CASCADING BLOCK CREATION UTILITY
+// Adapted from Full Featured Subjournals pattern for roam/render deployment
+// ===================================================================
+
+// 🔍 FIND BLOCK WITH EXACT TEXT SEARCH
+function findBlockWithExactSearch(parentUid, targetText) {
+  try {
+    console.log(
+      `🔍 SEARCH: Looking for "${targetText}" under parent ${parentUid}`
+    );
+
+    // Search for blocks with exact text match
+    const exactMatch = window.roamAlphaAPI.q(`
+      [:find (pull ?child [:block/uid :block/string])
+       :where 
+       [?parent :block/uid "${parentUid}"] 
+       [?child :block/parents ?parent]
+       [?child :block/string "${targetText}"]]
+    `);
+
+    if (exactMatch && exactMatch.length > 0) {
+      const found = exactMatch[0][0];
+      const result = {
+        uid: found[":block/uid"] || found.uid,
+        string: found[":block/string"] || found.string,
+      };
+      console.log(`✅ FOUND: "${targetText}" at UID ${result.uid}`);
+      return result;
+    }
+
+    console.log(`❌ NOT FOUND: "${targetText}" under parent ${parentUid}`);
+    return null;
+  } catch (error) {
+    console.error(`❌ SEARCH ERROR for "${targetText}":`, error);
+    return null;
+  }
+}
+
+// 🔧 CREATE BLOCK WITH PROPER ORDERING
+async function createHierarchyBlock(parentUid, content, order = null) {
+  try {
+    console.log(`🔧 CREATE: Creating "${content}" under parent ${parentUid}`);
+
+    if (order === null) {
+      // Get current child count for proper ordering
+      const childCount =
+        window.roamAlphaAPI.q(`
+        [:find (count ?child) . :where 
+        [?parent :block/uid "${parentUid}"] [?child :block/parents ?parent]]
+      `)?.[0] || 0;
+      order = childCount;
+    }
+
+    const blockUid = window.CalendarUtilities.RoamUtils.generateUID();
+    console.log(`🔧 CREATE: Generated UID ${blockUid} for "${content}"`);
+
+    await window.roamAlphaAPI.data.block.create({
+      location: { "parent-uid": parentUid, order: order },
+      block: { uid: blockUid, string: content },
+    });
+
+    console.log(`✅ CREATED: "${content}" at UID ${blockUid}`);
+    return blockUid;
+  } catch (error) {
+    console.error(`❌ CREATE ERROR for "${content}":`, error);
+    throw error;
+  }
+}
+
+// 🏗️ CASCADING COMPONENT HIERARCHY CREATOR
+async function createComponentHierarchyWithCascading(componentCode) {
+  console.log("🏗️ CASCADING: Starting component hierarchy creation...");
+
+  const startTime = Date.now();
+  const TIMEOUT = 5000; // 5 second timeout
+  const workingOn = { step: null, uid: null, content: null };
+  let loopCount = 0;
+
+  // Define the hierarchy we need to create
+  const hierarchy = [
+    "**Components added by Extensions:**",
+    "**Added by Calendar Suite extension:**",
+    "**Yearly View 2.0:**",
+  ];
+
+  // Get roam/render page UID
+  let renderPageUid =
+    window.CalendarUtilities.RoamUtils.getPageUid("roam/render");
+  if (!renderPageUid) {
+    console.log("📄 CASCADING: Creating roam/render page...");
+    renderPageUid = await window.CalendarUtilities.RoamUtils.createPage(
+      "roam/render"
+    );
+  }
+  console.log(`📄 CASCADING: roam/render page UID: ${renderPageUid}`);
+
+  while (Date.now() - startTime < TIMEOUT) {
+    loopCount++;
+    console.log(`🔄 CASCADING: Loop ${loopCount} starting...`);
+
+    try {
+      let currentParentUid = renderPageUid;
+      let hierarchyComplete = true;
+
+      // Check each level of the hierarchy
+      for (let i = 0; i < hierarchy.length; i++) {
+        const levelText = hierarchy[i];
+        const levelName = `level-${i + 1}`;
+
+        console.log(`🔍 CASCADING: Checking ${levelName}: "${levelText}"`);
+
+        const existingBlock = findBlockWithExactSearch(
+          currentParentUid,
+          levelText
+        );
+
+        if (!existingBlock) {
+          console.log(`🔧 CASCADING: Missing ${levelName}, creating...`);
+
+          // Avoid duplicate creation attempts
+          if (
+            workingOn.step !== levelName ||
+            workingOn.uid !== currentParentUid
+          ) {
+            workingOn.step = levelName;
+            workingOn.uid = currentParentUid;
+            workingOn.content = levelText;
+
+            await createHierarchyBlock(currentParentUid, levelText, 0);
+          }
+
+          // Mark hierarchy as incomplete and restart
+          hierarchyComplete = false;
+          break;
+        } else {
+          console.log(
+            `✅ CASCADING: Found ${levelName} at UID ${existingBlock.uid}`
+          );
+          currentParentUid = existingBlock.uid;
+        }
+      }
+
+      // If we got through all hierarchy levels, create the component
+      if (hierarchyComplete) {
+        console.log(
+          "🎯 CASCADING: Hierarchy complete, creating component block..."
+        );
+
+        // Check if component already exists
+        const existingComponent = window.roamAlphaAPI.q(`
+          [:find ?childUid :where 
+          [?parent :block/uid "${currentParentUid}"] 
+          [?child :block/parents ?parent] 
+          [?child :block/uid ?childUid]
+          [?child :block/string ?string]
+          [(clojure.string/includes? ?string "\`\`\`clojure")]]
+        `);
+
+        if (existingComponent && existingComponent.length > 0) {
+          const componentUid = existingComponent[0][0];
+          console.log(
+            `✅ CASCADING: Found existing component at UID ${componentUid}`
+          );
+
+          // Check if it needs updating (is it a placeholder?)
+          const componentQuery = `[:find ?string . :where [?b :block/uid "${componentUid}"] [?b :block/string ?string]]`;
+          const componentContent = window.roamAlphaAPI.q(componentQuery);
+
+          if (componentContent && componentContent.includes("Hello, World!")) {
+            console.log("📦 CASCADING: Updating placeholder component...");
+            await window.roamAlphaAPI.data.block.update({
+              block: { uid: componentUid, string: componentCode },
+            });
+            console.log("✅ CASCADING: Component updated successfully!");
+          } else {
+            console.log("✅ CASCADING: Real component already exists!");
+          }
+
+          return componentUid;
+        } else {
+          // Create new component
+          console.log("🎯 CASCADING: Creating new component block...");
+          const componentUid = await createHierarchyBlock(
+            currentParentUid,
+            componentCode,
+            0
+          );
+
+          console.log(
+            `🎉 CASCADING: SUCCESS! Component created in ${loopCount} loops (${
+              Date.now() - startTime
+            }ms)`
+          );
+          return componentUid;
+        }
+      }
+
+      // Add small delay before retry
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } catch (error) {
+      console.error(`❌ CASCADING: Loop ${loopCount} error:`, error.message);
+      // Continue trying unless we're out of time
+    }
+  }
+
+  throw new Error(
+    `CASCADING: Timeout after ${TIMEOUT}ms (${loopCount} loops) - hierarchy creation failed`
+  );
+}
+
+// 🚀 ENHANCED DEPLOYMENT FUNCTION USING CASCADING UTILITY
+async function deployYearlyViewComponentWithCascading() {
+  console.log(
+    "🚀 CASCADING: Starting component deployment with local cascading utility..."
+  );
+
+  try {
+    // Check for existing component first using the original search logic
+    console.log("🔍 CASCADING: Checking for existing components...");
+    const existing = findExistingYearlyViewComponent();
+
+    if (existing) {
+      console.log(
+        "✅ CASCADING: Found existing component, checking if it needs updating..."
+      );
+
+      const existingBlockQuery = `[:find ?string . :where [?b :block/uid "${existing.uid}"] [?b :block/string ?string]]`;
+      const existingBlock = window.roamAlphaAPI.q(existingBlockQuery);
+
+      const isPlaceholder =
+        existingBlock && existingBlock.includes("Hello, World!");
+      console.log("🔍 CASCADING: Is placeholder component?", isPlaceholder);
+
+      if (isPlaceholder) {
+        console.log("📦 CASCADING: Updating placeholder to real component...");
+        try {
+          const realComponentCode = await fetchClojureScriptComponent();
+          await window.roamAlphaAPI.data.block.update({
+            block: { uid: existing.uid, string: realComponentCode },
+          });
+
+          console.log(
+            "✅ CASCADING: Successfully updated placeholder to real component!"
+          );
+          window._yearlyViewComponentUid = existing.uid;
+          return {
+            componentUid: existing.uid,
+            renderString: existing.renderString,
+          };
+        } catch (error) {
+          console.error("❌ CASCADING: Failed to update component:", error);
+          window._yearlyViewComponentUid = existing.uid;
+          return {
+            componentUid: existing.uid,
+            renderString: existing.renderString,
+          };
+        }
+      } else {
+        console.log(
+          "✅ CASCADING: Real component already deployed, skipping creation"
+        );
+        window._yearlyViewComponentUid = existing.uid;
+        return {
+          componentUid: existing.uid,
+          renderString: existing.renderString,
+        };
+      }
+    }
+
+    // Deploy new component using cascading utility
+    console.log(
+      "🆕 CASCADING: No existing component found, deploying new one..."
+    );
+
+    // Fetch the real component from GitHub
+    console.log("🌐 CASCADING: Fetching component from GitHub...");
+    const componentCode = await fetchClojureScriptComponent();
+    console.log(
+      "✅ CASCADING: Component fetched successfully, length:",
+      componentCode.length
+    );
+
+    // Use the cascading utility to create the entire hierarchy
+    console.log("🏗️ CASCADING: Using cascading utility to create hierarchy...");
+    const componentUid = await createComponentHierarchyWithCascading(
+      componentCode
+    );
+
+    // Store component UID globally
+    window._yearlyViewComponentUid = componentUid;
+    console.log("✅ CASCADING: Component UID stored globally:", componentUid);
+
+    // Show success message
+    setTimeout(() => {
+      alert(
+        "🎉 Yearly View Component Deployed!\n\n" +
+          `Component UID: ${componentUid}\n\n` +
+          "The full interactive calendar is now available.\n\n" +
+          "Visit year pages like [[2024]] or [[2025]] to see the calendar in action!"
+      );
+    }, 500);
+
+    console.log("🎉 CASCADING: Component deployment completed successfully!");
+
+    return {
+      componentUid: componentUid,
+      renderString: `{{roam/render: ((${componentUid}))}}`,
+      method: "cascading-utility",
+    };
+  } catch (error) {
+    console.error("❌ CASCADING: Component deployment failed:", error);
+
+    // Show detailed error to user
+    setTimeout(() => {
+      alert(
+        `❌ Component Deployment Failed!\n\n` +
+          `Error: ${error.message}\n\n` +
+          `Check browser console for detailed information.`
+      );
+    }, 500);
+
+    throw error;
+  }
+}
+
+// ===================================================================
+// 🔧 TARGETED FIX FOR HIERARCHY ISSUE (LEGACY - KEPT FOR COMPARISON)
+// ===================================================================
+
+async function createCalendarSuiteHierarchy() {
+  console.log("🔧 FIX: Creating Calendar Suite hierarchy specifically...");
+
+  // We know the Extensions block exists: o5xl49dxF
+  const extensionsBlockUid = "o5xl49dxF";
+  console.log("✅ FIX: Using known Extensions block UID:", extensionsBlockUid);
+
+  // Check if "**Added by Calendar Suite extension:**" already exists
+  const calendarSuiteQuery = `[:find ?childUid :where 
+                              [?parent :block/uid "${extensionsBlockUid}"] 
+                              [?child :block/parents ?parent] 
+                              [?child :block/uid ?childUid]
+                              [?child :block/string "**Added by Calendar Suite extension:**"]]`;
+
+  console.log("🔍 FIX: Searching for Calendar Suite block...");
+  const existingCalendarSuite = window.roamAlphaAPI.q(calendarSuiteQuery);
+  console.log("🔍 FIX: Calendar Suite search result:", existingCalendarSuite);
+
+  let calendarSuiteUid;
+
+  if (existingCalendarSuite && existingCalendarSuite.length > 0) {
+    calendarSuiteUid = existingCalendarSuite[0][0];
+    console.log(
+      "✅ FIX: Found existing Calendar Suite block:",
+      calendarSuiteUid
+    );
+  } else {
+    // Create the Calendar Suite block
+    console.log("🆕 FIX: Creating Calendar Suite block...");
+
+    calendarSuiteUid = window.CalendarUtilities.RoamUtils.generateUID();
+    console.log(
+      "🔍 FIX: Generated UID for Calendar Suite block:",
+      calendarSuiteUid
+    );
+
+    // Get current child count for proper positioning
+    const childCountQuery = `[:find (count ?child) . :where 
+                            [?parent :block/uid "${extensionsBlockUid}"] 
+                            [?child :block/parents ?parent]]`;
+    const childCount = window.roamAlphaAPI.q(childCountQuery) || 0;
+    console.log("🔍 FIX: Current child count under Extensions:", childCount);
+
+    const createCalendarSuiteParams = {
+      location: {
+        "parent-uid": extensionsBlockUid,
+        order: childCount,
+      },
+      block: {
+        uid: calendarSuiteUid,
+        string: "**Added by Calendar Suite extension:**",
+      },
+    };
+
+    console.log(
+      "🔍 FIX: Calendar Suite creation params:",
+      createCalendarSuiteParams
+    );
+
+    try {
+      const createResult = await window.roamAlphaAPI.data.block.create(
+        createCalendarSuiteParams
+      );
+      console.log(
+        "✅ FIX: Calendar Suite block creation result:",
+        createResult
+      );
+
+      // Verify creation
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const verifyQuery = `[:find ?string . :where [?b :block/uid "${calendarSuiteUid}"] [?b :block/string ?string]]`;
+      const verifyResult = window.roamAlphaAPI.q(verifyQuery);
+      console.log("🔍 FIX: Calendar Suite verification:", verifyResult);
+
+      if (!verifyResult) {
+        throw new Error(
+          `Failed to verify Calendar Suite block creation: ${calendarSuiteUid}`
+        );
+      }
+
+      console.log(
+        "✅ FIX: Calendar Suite block created and verified successfully"
+      );
+    } catch (error) {
+      console.error("❌ FIX: Failed to create Calendar Suite block:", error);
+      throw error;
+    }
+  }
+
+  // Now create "**Yearly View 2.0:**" under Calendar Suite block
+  console.log("🔧 FIX: Creating Yearly View block under Calendar Suite...");
+
+  const yearlyViewQuery = `[:find ?childUid :where 
+                           [?parent :block/uid "${calendarSuiteUid}"] 
+                           [?child :block/parents ?parent] 
+                           [?child :block/uid ?childUid]
+                           [?child :block/string "**Yearly View 2.0:**"]]`;
+
+  const existingYearlyView = window.roamAlphaAPI.q(yearlyViewQuery);
+  console.log("🔍 FIX: Yearly View search result:", existingYearlyView);
+
+  let yearlyViewUid;
+
+  if (existingYearlyView && existingYearlyView.length > 0) {
+    yearlyViewUid = existingYearlyView[0][0];
+    console.log("✅ FIX: Found existing Yearly View block:", yearlyViewUid);
+  } else {
+    // Create the Yearly View block
+    console.log("🆕 FIX: Creating Yearly View block...");
+
+    yearlyViewUid = window.CalendarUtilities.RoamUtils.generateUID();
+    console.log("🔍 FIX: Generated UID for Yearly View block:", yearlyViewUid);
+
+    const createYearlyViewParams = {
+      location: {
+        "parent-uid": calendarSuiteUid,
+        order: 0,
+      },
+      block: {
+        uid: yearlyViewUid,
+        string: "**Yearly View 2.0:**",
+      },
+    };
+
+    console.log("🔍 FIX: Yearly View creation params:", createYearlyViewParams);
+
+    try {
+      const createResult = await window.roamAlphaAPI.data.block.create(
+        createYearlyViewParams
+      );
+      console.log("✅ FIX: Yearly View block creation result:", createResult);
+
+      // Verify creation
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const verifyQuery = `[:find ?string . :where [?b :block/uid "${yearlyViewUid}"] [?b :block/string ?string]]`;
+      const verifyResult = window.roamAlphaAPI.q(verifyQuery);
+      console.log("🔍 FIX: Yearly View verification:", verifyResult);
+
+      if (!verifyResult) {
+        throw new Error(
+          `Failed to verify Yearly View block creation: ${yearlyViewUid}`
+        );
+      }
+
+      console.log(
+        "✅ FIX: Yearly View block created and verified successfully"
+      );
+    } catch (error) {
+      console.error("❌ FIX: Failed to create Yearly View block:", error);
+      throw error;
+    }
+  }
+
+  console.log("✅ FIX: Complete hierarchy created successfully");
+  console.log("📊 FIX: Final structure:");
+  console.log(
+    `  Extensions (o5xl49dxF) -> Calendar Suite (${calendarSuiteUid}) -> Yearly View (${yearlyViewUid})`
+  );
+
+  return yearlyViewUid;
+}
+
+async function deployComponentWithTargetedFix() {
+  console.log("🎯 FIX: Starting targeted component deployment...");
+
+  try {
+    // Step 1: Create the proper hierarchy
+    console.log("🏗️ FIX: Step 1 - Creating hierarchy...");
+    const yearlyViewParentUid = await createCalendarSuiteHierarchy();
+    console.log("✅ FIX: Hierarchy created, parent UID:", yearlyViewParentUid);
+
+    // Step 2: Fetch component code
+    console.log("🌐 FIX: Step 2 - Fetching component...");
+    const componentCode = await fetchClojureScriptComponent();
+    console.log("✅ FIX: Component fetched, length:", componentCode.length);
+
+    // Step 3: Create component block
+    console.log("🎯 FIX: Step 3 - Creating component block...");
+    const componentUid = window.CalendarUtilities.RoamUtils.generateUID();
+    console.log("🔍 FIX: Generated component UID:", componentUid);
+
+    const componentParams = {
+      location: {
+        "parent-uid": yearlyViewParentUid,
+        order: 0,
+      },
+      block: {
+        uid: componentUid,
+        string: componentCode,
+      },
+    };
+
+    console.log("🔍 FIX: Component creation params:", {
+      location: componentParams.location,
+      block: {
+        uid: componentParams.block.uid,
+        stringLength: componentParams.block.string.length,
+      },
+    });
+
+    const createResult = await window.roamAlphaAPI.data.block.create(
+      componentParams
+    );
+    console.log("✅ FIX: Component creation result:", createResult);
+
+    // Step 4: Verify component
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const verifyQuery = `[:find ?string . :where [?b :block/uid "${componentUid}"] [?b :block/string ?string]]`;
+    const verifyResult = window.roamAlphaAPI.q(verifyQuery);
+    console.log(
+      "🔍 FIX: Component verification - length:",
+      verifyResult ? verifyResult.length : "null"
+    );
+
+    if (!verifyResult) {
+      throw new Error(`Failed to verify component creation: ${componentUid}`);
+    }
+
+    // Step 5: Store component UID
+    window._yearlyViewComponentUid = componentUid;
+    console.log("✅ FIX: Component UID stored globally");
+
+    console.log("🎉 FIX: Component deployment completed successfully!");
+
+    return {
+      componentUid: componentUid,
+      renderString: `{{roam/render: ((${componentUid}))}}`,
+      hierarchyPath: `Extensions -> Calendar Suite -> Yearly View -> Component`,
+    };
+  } catch (error) {
+    console.error("❌ FIX: Targeted deployment failed:", error);
+    throw error;
+  }
+}
+
+// ===================================================================
 // 🎛️ DEBUG COMMAND PALETTE SYSTEM
 // ===================================================================
 
@@ -505,6 +1070,39 @@ function setupDebugCommands() {
         alert(
           "🔄 Component UID cache cleared.\n\nNext deployment will create a fresh component."
         );
+      },
+    },
+    {
+      label: "CASCADING: Deploy Component with Cascading Utility",
+      callback: async () => {
+        const confirm = window.confirm(
+          "🏗️ Deploy Yearly View component using CASCADING utility?\n\n" +
+            "This uses the proven cascading block creation pattern from Subjournals.\n\n" +
+            "• Bulletproof hierarchy creation\n" +
+            "• Automatic retry logic\n" +
+            "• Professional error handling\n\n" +
+            "Click OK to proceed, Cancel to abort."
+        );
+
+        if (confirm) {
+          try {
+            console.log("🏗️ CASCADING: Starting cascading deployment...");
+            const result = await deployYearlyViewComponentWithCascading();
+
+            alert(
+              "🎉 Cascading Deployment Complete!\n\n" +
+                `Component UID: ${result.componentUid}\n` +
+                `Method: ${result.method}\n\n` +
+                "Check the roam/render page to verify the component was created properly."
+            );
+          } catch (error) {
+            console.error("❌ CASCADING: Deployment failed:", error);
+            alert(
+              `❌ Cascading Deployment Failed:\n\n${error.message}\n\n` +
+                "Check console for detailed error information."
+            );
+          }
+        }
       },
     },
   ];
@@ -665,13 +1263,23 @@ const debugExtension = {
         "1. Use 'DEBUG: Analyze roam/render Structure' to examine current state"
       );
       console.log(
-        "2. Use 'DEBUG: Test Hierarchy Creation' to test hierarchy building"
+        "2. Use 'CASCADING: Deploy Component with Cascading Utility' - RECOMMENDED!"
       );
       console.log(
-        "3. Use 'DEBUG: Force Create Component' to deploy with debugging"
+        "3. Use 'DEBUG: Test Hierarchy Creation' to test basic hierarchy building"
       );
       console.log(
-        "4. Use 'DEBUG: Test API Calls' to verify basic functionality"
+        "4. Use 'DEBUG: Force Create Component' to deploy with debugging"
+      );
+      console.log(
+        "5. Use 'DEBUG: Test API Calls' to verify basic functionality"
+      );
+      console.log("");
+      console.log(
+        "🎯 RECOMMENDED: Use 'CASCADING: Deploy Component with Cascading Utility'"
+      );
+      console.log(
+        "   This command uses the proven cascading pattern from Subjournals extension"
       );
       console.log("");
       console.log("🔍 Focus Areas:");
