@@ -413,11 +413,6 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
   showDeadlineTooltip(tagElement, tag) {
     console.log("🔍 DEBUG: showDeadlineTooltip called for tag:", tag);
     console.log("🔍 DEBUG: tagElement:", tagElement);
-    console.log("🔍 DEBUG: About to get tooltip content...");
-
-    // Get the tooltip content
-    const tooltipContent = this.getDeadlineTooltipContent(tagElement, tag);
-    console.log("🔍 DEBUG: Got tooltip content:", tooltipContent);
 
     try {
       // Hide any existing tooltip first
@@ -533,25 +528,87 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
       }
       console.log("🔍 DEBUG: Found block element:", blockElement);
 
-      // Get the block text content
-      const blockText =
-        blockElement.textContent || blockElement.innerText || "";
-      console.log("🔍 DEBUG: Block text:", blockText);
+      // First, try to find date in data-page-links attribute
+      const pageLinksData = blockElement.getAttribute("data-page-links");
+      console.log("🔍 DEBUG: data-page-links:", pageLinksData);
 
-      // Look for date pattern: [[Month Day, Year]]
-      const dateMatch = blockText.match(
-        /\[\[([A-Za-z]+)\s+(\d{1,2}(?:st|nd|rd|th)?),\s+(\d{4})\]\]/
-      );
-      console.log("🔍 DEBUG: Date match result:", dateMatch);
+      let dateFound = null;
 
-      if (!dateMatch) {
-        console.log("🔍 DEBUG: No date found, using fallback tooltip");
+      if (pageLinksData) {
+        try {
+          const pageLinks = JSON.parse(pageLinksData);
+          console.log("🔍 DEBUG: Parsed page links:", pageLinks);
+
+          // Look for date pattern in page links
+          for (const link of pageLinks) {
+            if (typeof link === "string") {
+              const dateMatch = link.match(
+                /^([A-Za-z]+)\s+(\d{1,2}(?:st|nd|rd|th)?),\s+(\d{4})$/
+              );
+              if (dateMatch) {
+                dateFound = dateMatch;
+                console.log("🔍 DEBUG: Found date in page links:", dateMatch);
+                break;
+              }
+            }
+          }
+        } catch (parseError) {
+          console.log("🔍 DEBUG: Error parsing page links:", parseError);
+        }
+      }
+
+      // Fallback: look for date elements in DOM
+      if (!dateFound) {
+        console.log(
+          "🔍 DEBUG: No date in page links, checking DOM elements..."
+        );
+        const dateElements = blockElement.querySelectorAll(
+          "span[data-link-title]"
+        );
+        console.log("🔍 DEBUG: Found date elements:", dateElements);
+
+        for (const element of dateElements) {
+          const linkTitle = element.getAttribute("data-link-title");
+          console.log("🔍 DEBUG: Checking link title:", linkTitle);
+
+          if (linkTitle) {
+            const dateMatch = linkTitle.match(
+              /^([A-Za-z]+)\s+(\d{1,2}(?:st|nd|rd|th)?),\s+(\d{4})$/
+            );
+            if (dateMatch) {
+              dateFound = dateMatch;
+              console.log("🔍 DEBUG: Found date in DOM element:", dateMatch);
+              break;
+            }
+          }
+        }
+      }
+
+      // Final fallback: original text search (probably won't work but try anyway)
+      if (!dateFound) {
+        console.log(
+          "🔍 DEBUG: Trying text content search as final fallback..."
+        );
+        const blockText =
+          blockElement.textContent || blockElement.innerText || "";
+        console.log("🔍 DEBUG: Block text:", blockText);
+        const dateMatch = blockText.match(
+          /\[\[([A-Za-z]+)\s+(\d{1,2}(?:st|nd|rd|th)?),\s+(\d{4})\]\]/
+        );
+        console.log("🔍 DEBUG: Text date match result:", dateMatch);
+        if (dateMatch) {
+          dateFound = [dateMatch[0], dateMatch[1], dateMatch[2], dateMatch[3]];
+        }
+      }
+
+      if (!dateFound) {
+        console.log("🔍 DEBUG: No date found anywhere, using fallback tooltip");
         // Fallback to normal tooltip
         const config = this.currentConfig[tag];
         return `${config.label} (#${tag})`;
       }
 
-      const [, monthStr, dayStr, yearStr] = dateMatch;
+      const [, monthStr, dayStr, yearStr] = dateFound;
       console.log(
         "🔍 DEBUG: Parsed date parts - month:",
         monthStr,
