@@ -102,7 +102,7 @@ function getStoredTagConfiguration() {
 }
 
 // ===================================================================
-// 🌐 EXTERNAL CLOJURESCRIPT ASSET FETCHING (NEW FOR STEP 6)
+// 🌐 EXTERNAL CLOJURESCRIPT ASSET FETCHING (NEW FOR STEP 6) - DEBUGGED
 // ===================================================================
 
 async function fetchClojureScriptComponent() {
@@ -383,7 +383,7 @@ async function handleYearPageDetected(pageTitle) {
 }
 
 // ===================================================================
-// 🏗️ REAL COMPONENT DEPLOYMENT (STEP 6 - UPDATED)
+// 🏗️ REAL COMPONENT DEPLOYMENT (STEP 6 - DEBUGGED)
 // ===================================================================
 
 function getComponentUid() {
@@ -419,20 +419,80 @@ function findExistingYearlyViewComponent() {
     "defn main",
   ];
 
+  console.log("🔍 DEBUG: Starting search with patterns:", searchStrings);
+
   for (const searchStr of searchStrings) {
-    const blocks = window.CalendarUtilities.RoamUtils.queryBlocks(
-      null,
-      searchStr
-    );
-    if (blocks && blocks.length > 0) {
-      console.log(`✅ Found existing component via: "${searchStr}"`);
-      return {
-        uid: blocks[0].uid,
-        renderString: `{{roam/render: ((${blocks[0].uid}))}}`,
-      };
+    console.log(`🔍 DEBUG: Searching for pattern: "${searchStr}"`);
+
+    try {
+      // DEBUG: Check if queryBlocks function exists
+      if (!window.CalendarUtilities?.RoamUtils?.queryBlocks) {
+        console.warn(
+          "❌ DEBUG: CalendarUtilities.RoamUtils.queryBlocks not available"
+        );
+        console.log("🔍 DEBUG: CalendarUtilities:", window.CalendarUtilities);
+        console.log(
+          "🔍 DEBUG: RoamUtils:",
+          window.CalendarUtilities?.RoamUtils
+        );
+
+        // Try alternative search method using Roam API directly
+        console.log("🔄 DEBUG: Trying alternative search with Roam API...");
+        const query = `[:find ?uid ?string :where 
+                        [?block :block/uid ?uid] 
+                        [?block :block/string ?string] 
+                        [(clojure.string/includes? ?string "${searchStr}")]]`;
+
+        console.log("🔍 DEBUG: Using query:", query);
+        const results = window.roamAlphaAPI.q(query);
+        console.log("🔍 DEBUG: Query results:", results);
+
+        if (results && results.length > 0) {
+          console.log(
+            `✅ DEBUG: Found existing component via direct API with pattern: "${searchStr}"`
+          );
+          console.log("🔍 DEBUG: Found block UID:", results[0][0]);
+          console.log(
+            "🔍 DEBUG: Found block content preview:",
+            results[0][1].substring(0, 100) + "..."
+          );
+
+          return {
+            uid: results[0][0],
+            renderString: `{{roam/render: ((${results[0][0]}))}}`,
+          };
+        }
+
+        continue; // Try next search pattern
+      }
+
+      // Original search method
+      const blocks = window.CalendarUtilities.RoamUtils.queryBlocks(
+        null,
+        searchStr
+      );
+
+      console.log(`🔍 DEBUG: queryBlocks result for "${searchStr}":`, blocks);
+      console.log(`🔍 DEBUG: Found ${blocks ? blocks.length : 0} blocks`);
+
+      if (blocks && blocks.length > 0) {
+        console.log(`✅ Found existing component via: "${searchStr}"`);
+        console.log("🔍 DEBUG: First block:", blocks[0]);
+        console.log("🔍 DEBUG: Block UID:", blocks[0].uid);
+
+        return {
+          uid: blocks[0].uid,
+          renderString: `{{roam/render: ((${blocks[0].uid}))}}`,
+        };
+      } else {
+        console.log(`❌ DEBUG: No blocks found for pattern: "${searchStr}"`);
+      }
+    } catch (error) {
+      console.error(`❌ DEBUG: Error searching for "${searchStr}":`, error);
     }
   }
 
+  console.log("❌ DEBUG: No existing component found with any search pattern");
   return null;
 }
 
@@ -440,18 +500,40 @@ async function deployYearlyViewComponent() {
   console.log("🚀 Deploying real Yearly View component...");
 
   // Check for existing component first
+  console.log("🔍 DEBUG: Checking for existing component...");
   const existing = findExistingYearlyViewComponent();
+
+  console.log("🔍 DEBUG: Existing component result:", existing);
+
   if (existing) {
     console.log(
       "🔄 Component already exists, checking if it needs updating..."
     );
+    console.log("🔍 DEBUG: Existing component UID:", existing.uid);
 
     // Check if it's the old placeholder
-    const existingBlock = window.roamAlphaAPI.q(
-      `[:find ?string . :where [?b :block/uid "${existing.uid}"] [?b :block/string ?string]]`
+    const existingBlockQuery = `[:find ?string . :where [?b :block/uid "${existing.uid}"] [?b :block/string ?string]]`;
+    console.log(
+      "🔍 DEBUG: Checking existing block content with query:",
+      existingBlockQuery
     );
 
-    if (existingBlock && existingBlock.includes("Hello, World!")) {
+    const existingBlock = window.roamAlphaAPI.q(existingBlockQuery);
+
+    console.log(
+      "🔍 DEBUG: Existing block content length:",
+      existingBlock ? existingBlock.length : "null"
+    );
+    console.log(
+      "🔍 DEBUG: Existing block content preview:",
+      existingBlock ? existingBlock.substring(0, 200) + "..." : "null"
+    );
+
+    const isPlaceholder =
+      existingBlock && existingBlock.includes("Hello, World!");
+    console.log("🔍 DEBUG: Is placeholder component?", isPlaceholder);
+
+    if (isPlaceholder) {
       console.log(
         "📦 Found old placeholder component, updating to real component..."
       );
@@ -459,6 +541,10 @@ async function deployYearlyViewComponent() {
       try {
         // Fetch the real component
         const realComponentCode = await fetchClojureScriptComponent();
+        console.log(
+          "🔍 DEBUG: Got real component code, length:",
+          realComponentCode.length
+        );
 
         // Update the existing block with the real component
         await window.roamAlphaAPI.data.block.update({
@@ -491,7 +577,7 @@ async function deployYearlyViewComponent() {
         };
       }
     } else {
-      console.log("✅ Real component already deployed, skipping");
+      console.log("✅ Real component already deployed, skipping creation");
       window._yearlyViewComponentUid = existing.uid;
       return {
         componentUid: existing.uid,
@@ -502,6 +588,9 @@ async function deployYearlyViewComponent() {
 
   // Deploy new component
   console.log("🆕 Deploying new real component...");
+  console.log(
+    "🔍 DEBUG: No existing component found, proceeding with creation..."
+  );
 
   try {
     // Fetch the real component from GitHub
