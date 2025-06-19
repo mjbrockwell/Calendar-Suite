@@ -413,6 +413,11 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
   showDeadlineTooltip(tagElement, tag) {
     console.log("🔍 DEBUG: showDeadlineTooltip called for tag:", tag);
     console.log("🔍 DEBUG: tagElement:", tagElement);
+    console.log("🔍 DEBUG: About to get tooltip content...");
+
+    // Get the tooltip content
+    const tooltipContent = this.getDeadlineTooltipContent(tagElement, tag);
+    console.log("🔍 DEBUG: Got tooltip content:", tooltipContent);
 
     try {
       // Hide any existing tooltip first
