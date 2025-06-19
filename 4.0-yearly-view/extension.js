@@ -13,6 +13,7 @@ class CalendarTagCSSHandler {
     this.configPageTitle = "roam/ext/calendar suite/config";
     this.currentConfig = {};
     this.mutationObserver = null;
+    this.currentTooltip = null;
   }
 
   async loadConfiguration() {
@@ -112,6 +113,9 @@ class CalendarTagCSSHandler {
   }
 
   cleanup() {
+    // Hide any active tooltip
+    this.hideDeadlineTooltip();
+
     // Remove CSS
     if (this.styleElement) {
       this.styleElement.remove();
@@ -127,12 +131,26 @@ class CalendarTagCSSHandler {
     // Remove deadline event listeners
     const allTags = document.querySelectorAll("span.rm-page-ref--tag");
     allTags.forEach((tagElement) => {
-      if (tagElement._deadlineHoverHandler) {
+      if (tagElement._deadlineHandlers) {
         tagElement.removeEventListener(
           "mouseenter",
-          tagElement._deadlineHoverHandler
+          tagElement._deadlineHandlers.enter
         );
-        delete tagElement._deadlineHoverHandler;
+        tagElement.removeEventListener(
+          "mouseleave",
+          tagElement._deadlineHandlers.leave
+        );
+        delete tagElement._deadlineHandlers;
+      }
+    });
+
+    // Clean up any orphaned tooltips
+    const orphanedTooltips = document.querySelectorAll(
+      ".yearly-view-deadline-tooltip"
+    );
+    orphanedTooltips.forEach((tooltip) => {
+      if (tooltip.parentNode) {
+        tooltip.parentNode.removeChild(tooltip);
       }
     });
   }
@@ -160,18 +178,22 @@ class CalendarTagCSSHandler {
     const beforeSelectors = enabledTags.map(
       ([tag]) => `span.rm-page-ref--tag[data-tag="${tag}"]::before`
     );
-    const afterSelectors = enabledTags.map(
-      ([tag]) => `span.rm-page-ref--tag[data-tag="${tag}"]:hover::after`
-    );
 
-    // Identify deadline tags for special behavior
+    // Separate deadline and non-deadline tags for different tooltip handling
     const deadlineTags = enabledTags.filter(([tag, config]) =>
       /deadline/i.test(config.label)
+    );
+    const nonDeadlineTags = enabledTags.filter(
+      ([tag, config]) => !/deadline/i.test(config.label)
+    );
+
+    const nonDeadlineAfterSelectors = nonDeadlineTags.map(
+      ([tag]) => `span.rm-page-ref--tag[data-tag="${tag}"]:hover::after`
     );
 
     let css = `
 /* ===================================================================
- * 🎯 YEARLY VIEW - DYNAMIC CALENDAR TAG CSS
+ * 🎯 YEARLY VIEW - DYNAMIC CALENDAR TAG CSS WITH JS TOOLTIPS
  * Generated: ${new Date().toISOString()}
  * Source: [[${this.configPageTitle}]]
  * ===================================================================*/
@@ -208,8 +230,8 @@ ${beforeSelectors.join(",\n")} {
   transition: all 0.2s ease;
 }
 
-/* Hover tooltip styling */
-${afterSelectors.join(",\n")} {
+/* CSS tooltips only for NON-deadline tags */
+${nonDeadlineAfterSelectors.join(",\n")} {
   position: absolute;
   top: -30px;
   left: 50%;
@@ -222,6 +244,30 @@ ${afterSelectors.join(",\n")} {
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Custom JavaScript tooltip styling */
+.yearly-view-deadline-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #f5f0e4;
+  color: #3a2a14;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.1);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.yearly-view-deadline-tooltip.visible {
+  opacity: 1;
 }
 
 `;
@@ -239,32 +285,16 @@ span.rm-page-ref--tag[data-tag="${tag}"]::before {
   color: white;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
+`;
 
+      // Only add CSS tooltip for non-deadline tags
+      if (!isDeadline) {
+        css += `
 span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
   content: "${config.label} (#${tag})";
   background: ${config.secondaryColor};
   color: ${config.primaryColor};
   border-color: ${config.primaryColor};
-}
-`;
-
-      // Add special class for deadline tags
-      if (isDeadline) {
-        css += `
-span.rm-page-ref--tag[data-tag="${tag}"] {
-  position: relative;
-}
-span.rm-page-ref--tag[data-tag="${tag}"]:after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-span.rm-page-ref--tag[data-tag="${tag}"].deadline-tag:hover::after {
-  content: attr(data-deadline-tooltip);
 }
 `;
       }
@@ -311,7 +341,7 @@ span.rm-page-ref--tag[data-tag="${tag}"].deadline-tag:hover::after {
   }
 
   // ===================================================================
-  // 🎯 DEADLINE COUNTDOWN EASTER EGG
+  // 🎯 DEADLINE COUNTDOWN EASTER EGG - JAVASCRIPT TOOLTIPS
   // ===================================================================
 
   setupDeadlineCountdown() {
@@ -325,28 +355,120 @@ span.rm-page-ref--tag[data-tag="${tag}"].deadline-tag:hover::after {
         `span.rm-page-ref--tag[data-tag="${tag}"]`
       );
       tagElements.forEach((tagElement) => {
-        // Remove existing listener to prevent duplicates
-        tagElement.removeEventListener(
-          "mouseenter",
-          tagElement._deadlineHoverHandler
-        );
-
-        // Create and store the handler
-        tagElement._deadlineHoverHandler = () =>
-          this.handleDeadlineHover(tagElement, tag);
-        tagElement.addEventListener(
-          "mouseenter",
-          tagElement._deadlineHoverHandler
-        );
+        this.attachDeadlineTooltip(tagElement, tag);
       });
     });
   }
 
-  handleDeadlineHover(tagElement, tag) {
+  attachDeadlineTooltip(tagElement, tag) {
+    // Remove existing listeners to prevent duplicates
+    if (tagElement._deadlineHandlers) {
+      tagElement.removeEventListener(
+        "mouseenter",
+        tagElement._deadlineHandlers.enter
+      );
+      tagElement.removeEventListener(
+        "mouseleave",
+        tagElement._deadlineHandlers.leave
+      );
+    }
+
+    // Create new handlers
+    const enterHandler = (e) => this.showDeadlineTooltip(e.target, tag);
+    const leaveHandler = () => this.hideDeadlineTooltip();
+
+    // Store handlers for cleanup
+    tagElement._deadlineHandlers = { enter: enterHandler, leave: leaveHandler };
+
+    // Attach event listeners
+    tagElement.addEventListener("mouseenter", enterHandler);
+    tagElement.addEventListener("mouseleave", leaveHandler);
+  }
+
+  showDeadlineTooltip(tagElement, tag) {
+    try {
+      // Hide any existing tooltip first
+      this.hideDeadlineTooltip();
+
+      // Get the tooltip content
+      const tooltipContent = this.getDeadlineTooltipContent(tagElement, tag);
+      if (!tooltipContent) return; // Graceful failure
+
+      // Create tooltip element
+      const tooltip = document.createElement("div");
+      tooltip.className = "yearly-view-deadline-tooltip";
+      tooltip.textContent = tooltipContent;
+
+      // Style based on tag colors for extra polish
+      const config = this.currentConfig[tag];
+      if (config) {
+        tooltip.style.background = config.secondaryColor;
+        tooltip.style.color = config.primaryColor;
+        tooltip.style.borderColor = config.primaryColor;
+      }
+
+      // Add to page
+      document.body.appendChild(tooltip);
+
+      // Position the tooltip
+      this.positionTooltip(tooltip, tagElement);
+
+      // Store reference for cleanup
+      this.currentTooltip = tooltip;
+
+      // Fade in
+      requestAnimationFrame(() => {
+        tooltip.classList.add("visible");
+      });
+    } catch (error) {
+      // Graceful failure - just do nothing
+      console.debug("Deadline tooltip failed gracefully:", error);
+    }
+  }
+
+  hideDeadlineTooltip() {
+    if (this.currentTooltip) {
+      this.currentTooltip.classList.remove("visible");
+
+      // Remove after fade out
+      setTimeout(() => {
+        if (this.currentTooltip && this.currentTooltip.parentNode) {
+          this.currentTooltip.parentNode.removeChild(this.currentTooltip);
+        }
+        this.currentTooltip = null;
+      }, 200);
+    }
+  }
+
+  positionTooltip(tooltip, tagElement) {
+    const tagRect = tagElement.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+
+    // Position above the tag, centered
+    let left = tagRect.left + tagRect.width / 2 - tooltipRect.width / 2;
+    let top = tagRect.top - tooltipRect.height - 8;
+
+    // Keep tooltip on screen
+    const padding = 10;
+    left = Math.max(
+      padding,
+      Math.min(left, window.innerWidth - tooltipRect.width - padding)
+    );
+
+    // If tooltip would go above viewport, show below instead
+    if (top < padding) {
+      top = tagRect.bottom + 8;
+    }
+
+    tooltip.style.left = left + window.scrollX + "px";
+    tooltip.style.top = top + window.scrollY + "px";
+  }
+
+  getDeadlineTooltipContent(tagElement, tag) {
     try {
       // Find the containing block
       const blockElement = tagElement.closest(".rm-block");
-      if (!blockElement) return;
+      if (!blockElement) return null;
 
       // Get the block text content
       const blockText =
@@ -356,13 +478,21 @@ span.rm-page-ref--tag[data-tag="${tag}"].deadline-tag:hover::after {
       const dateMatch = blockText.match(
         /\[\[([A-Za-z]+)\s+(\d{1,2}(?:st|nd|rd|th)?),\s+(\d{4})\]\]/
       );
-      if (!dateMatch) return;
+      if (!dateMatch) {
+        // Fallback to normal tooltip
+        const config = this.currentConfig[tag];
+        return `${config.label} (#${tag})`;
+      }
 
       const [, monthStr, dayStr, yearStr] = dateMatch;
 
       // Parse the date
       const targetDate = this.parseRoamDate(monthStr, dayStr, yearStr);
-      if (!targetDate) return;
+      if (!targetDate) {
+        // Fallback to normal tooltip
+        const config = this.currentConfig[tag];
+        return `${config.label} (#${tag})`;
+      }
 
       // Calculate days remaining
       const today = new Date();
@@ -388,12 +518,11 @@ span.rm-page-ref--tag[data-tag="${tag}"].deadline-tag:hover::after {
         } overdue`;
       }
 
-      // Update the tooltip
-      tagElement.setAttribute("data-deadline-tooltip", tooltipText);
-      tagElement.classList.add("deadline-tag");
+      return tooltipText;
     } catch (error) {
-      // Graceful failure - just do nothing
-      console.debug("Deadline countdown failed gracefully:", error);
+      // Graceful failure - return normal tooltip
+      const config = this.currentConfig[tag];
+      return config ? `${config.label} (#${tag})` : null;
     }
   }
 
@@ -498,11 +627,21 @@ span.rm-page-ref--tag[data-tag="${tag}"].deadline-tag:hover::after {
                 this.currentConfig[tag] &&
                 /deadline/i.test(this.currentConfig[tag].label)
               ) {
-                tagElement.addEventListener("mouseenter", () =>
-                  this.handleDeadlineHover(tagElement, tag)
-                );
+                this.attachDeadlineTooltip(tagElement, tag);
               }
             });
+
+            // Also check if the node itself is a deadline tag
+            if (node.matches && node.matches("span.rm-page-ref--tag")) {
+              const tag = node.getAttribute("data-tag");
+              if (
+                tag &&
+                this.currentConfig[tag] &&
+                /deadline/i.test(this.currentConfig[tag].label)
+              ) {
+                this.attachDeadlineTooltip(node, tag);
+              }
+            }
           }
         });
       });
