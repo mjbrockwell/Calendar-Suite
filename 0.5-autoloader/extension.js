@@ -495,13 +495,22 @@ function dismissInstallerButton() {
 
 // Show the installer button (in case user wants to bring it back)
 function showInstallerButton() {
-  const buttonContainer = document.getElementById(
+  // First clear the dismissal preference
+  localStorage.removeItem("calendar-installer-dismissed");
+
+  // Check if container already exists
+  const existingContainer = document.getElementById(
     "calendar-installer-container"
   );
-  if (buttonContainer) {
-    buttonContainer.style.display = "block";
-    localStorage.removeItem("calendar-installer-dismissed");
+  if (existingContainer) {
+    existingContainer.style.display = "block";
+    console.log("📅 Calendar Suite Installer button restored (was hidden)");
+    return;
   }
+
+  // If container doesn't exist, create it
+  addInstallerButton();
+  console.log("📅 Calendar Suite Installer button created");
 }
 
 // Add installer button to Roam
