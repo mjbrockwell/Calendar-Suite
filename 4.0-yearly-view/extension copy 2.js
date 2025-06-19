@@ -112,67 +112,26 @@ async function fetchClojureScriptComponent() {
     "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/4.0-yearly-view/yearly-view-component.cljs";
 
   try {
-    console.log(`📥 Starting fetch from: ${GITHUB_URL}`);
+    console.log(`📥 Fetching from: ${GITHUB_URL}`);
 
     const response = await fetch(GITHUB_URL);
 
-    // DEBUG: Log response details
-    console.log("🔍 DEBUG: Response status:", response.status);
-    console.log("🔍 DEBUG: Response ok:", response.ok);
-    console.log("🔍 DEBUG: Response headers:", response.headers);
-
     if (!response.ok) {
-      console.error(
-        "❌ DEBUG: Response not ok:",
-        response.status,
-        response.statusText
-      );
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const clojureScriptCode = await response.text();
 
-    // DEBUG: Log fetched content details
-    console.log("🔍 DEBUG: Fetched content length:", clojureScriptCode.length);
-    console.log(
-      "🔍 DEBUG: First 200 characters:",
-      clojureScriptCode.substring(0, 200)
-    );
-    console.log(
-      "🔍 DEBUG: Last 200 characters:",
-      clojureScriptCode.substring(clojureScriptCode.length - 200)
-    );
-
     // Basic validation
-    console.log("🔍 DEBUG: Starting validation checks...");
-
     if (!clojureScriptCode || clojureScriptCode.length < 100) {
-      console.error(
-        "❌ DEBUG: Content too short or empty:",
-        clojureScriptCode.length
-      );
       throw new Error("Fetched content appears to be invalid or empty");
     }
-    console.log("✅ DEBUG: Length validation passed");
 
-    const containsNamespace = clojureScriptCode.includes("yearly-view-v2.core");
-    console.log("🔍 DEBUG: Contains 'yearly-view-v2.core':", containsNamespace);
-
-    if (!containsNamespace) {
-      console.error("❌ DEBUG: Namespace validation failed");
-      console.log("🔍 DEBUG: Searching for namespace in content...");
-
-      // More detailed search
-      const namespaceMatches = clojureScriptCode.match(
-        /yearly-view-v2\.[a-zA-Z0-9\-\.]+/g
-      );
-      console.log("🔍 DEBUG: Found namespace-like patterns:", namespaceMatches);
-
+    if (!clojureScriptCode.includes("yearly-view-v2.core")) {
       throw new Error(
         "Fetched content doesn't appear to be the yearly view component"
       );
     }
-    console.log("✅ DEBUG: Namespace validation passed");
 
     console.log("✅ Successfully fetched ClojureScript component");
     console.log(`📊 Component size: ${clojureScriptCode.length} characters`);
@@ -180,23 +139,9 @@ async function fetchClojureScriptComponent() {
     // Wrap in code block for Roam
     const componentCode = `\`\`\`clojure\n${clojureScriptCode}\n\`\`\``;
 
-    // DEBUG: Log final wrapped content
-    console.log(
-      "🔍 DEBUG: Final wrapped content length:",
-      componentCode.length
-    );
-    console.log(
-      "🔍 DEBUG: Final wrapped content start:",
-      componentCode.substring(0, 100)
-    );
-    console.log("✅ DEBUG: Successfully created wrapped component code");
-
     return componentCode;
   } catch (error) {
     console.error("❌ Failed to fetch ClojureScript component:", error);
-    console.error("❌ DEBUG: Error type:", error.constructor.name);
-    console.error("❌ DEBUG: Error message:", error.message);
-    console.error("❌ DEBUG: Error stack:", error.stack);
 
     // Return fallback component with error information
     const fallbackComponent = `\`\`\`clojure
@@ -228,11 +173,7 @@ async function fetchClojureScriptComponent() {
       [:li "Try refreshing the page"]]]])
 \`\`\``;
 
-    console.log("🔄 DEBUG: Returning fallback component due to fetch failure");
-    console.log(
-      "🔍 DEBUG: Fallback component length:",
-      fallbackComponent.length
-    );
+    console.log("🔄 Returning fallback component due to fetch failure");
     return fallbackComponent;
   }
 }
