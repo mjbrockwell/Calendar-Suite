@@ -588,7 +588,7 @@ async function createComponentHierarchyWithCascading(componentCode) {
   );
 }
 
-// 🚀 SIMPLIFIED DEPLOYMENT FUNCTION USING PURE CASCADING UTILITY
+// 🚀 MAIN DEPLOYMENT FUNCTION USING PURE CASCADING UTILITY
 async function deployYearlyViewComponentWithCascading() {
   console.log(
     "🚀 CASCADING: Starting component deployment with pure cascading utility..."
