@@ -1,10 +1,10 @@
 // ===================================================================
-// 🗓️ YEARLY VIEW EXTENSION 2.0 - WITH INTEGRATED CSS HANDLER
-// Features: Real ClojureScript component + Dynamic Tag CSS
+// 🗓️ YEARLY VIEW EXTENSION 2.0 - PRODUCTION READY
+// Features: Real ClojureScript component + Dynamic Calendar Tag CSS
 // ===================================================================
 
 // ===================================================================
-// 🎨 INTEGRATED CALENDAR TAG CSS HANDLER
+// 🎨 CALENDAR TAG CSS HANDLER
 // ===================================================================
 
 class CalendarTagCSSHandler {
@@ -12,65 +12,31 @@ class CalendarTagCSSHandler {
     this.styleElement = null;
     this.configPageTitle = "roam/ext/calendar suite/config";
     this.currentConfig = {};
-    this.debugMode = true; // Enable debugging for troubleshooting
-    console.log("🎨 [CSS Handler] Constructor called - handler created");
   }
 
   async loadConfiguration() {
     try {
-      console.log("🎨 [CSS Handler] loadConfiguration() called");
-      console.log("🎨 [CSS Handler] Config page title:", this.configPageTitle);
-
       const configFromPage = await this.loadConfigFromPage();
-      console.log(
-        "🎨 [CSS Handler] loadConfigFromPage returned:",
-        configFromPage
-      );
-
       if (configFromPage && Object.keys(configFromPage).length > 0) {
         this.currentConfig = configFromPage;
-        console.log(
-          `🎨 [CSS Handler] ✅ Loaded ${
-            Object.keys(configFromPage).length
-          } tag configurations:`,
-          configFromPage
-        );
         return this.currentConfig;
       }
-
-      console.log(
-        "🎨 [CSS Handler] ⚠️ No tag configuration found in Calendar Suite config page"
-      );
       return {};
     } catch (error) {
-      console.error(
-        "🎨 [CSS Handler] ❌ Failed to load tag configuration:",
-        error
-      );
+      console.error("❌ Failed to load calendar tag configuration:", error);
       return {};
     }
   }
 
   async loadConfigFromPage() {
     try {
-      console.log("🎨 [CSS Handler] loadConfigFromPage() called");
-
       // Verify the config page exists
       const pageQuery = `[:find ?page :where [?page :node/title "${this.configPageTitle}"]]`;
-      console.log("🎨 [CSS Handler] Running page query:", pageQuery);
       const pageResults = window.roamAlphaAPI.q(pageQuery);
-      console.log("🎨 [CSS Handler] Page query results:", pageResults);
 
       if (!pageResults || pageResults.length === 0) {
-        console.log(
-          `🎨 [CSS Handler] ❌ Config page [[${this.configPageTitle}]] not found`
-        );
         return {};
       }
-
-      console.log(
-        `🎨 [CSS Handler] ✅ Found config page [[${this.configPageTitle}]]`
-      );
 
       // Look for the "Yearly config:" section
       const yearlyConfigQuery = `[:find ?uid ?string :where 
@@ -80,113 +46,55 @@ class CalendarTagCSSHandler {
                                 [?block :block/string ?string]
                                 [(clojure.string/includes? ?string "Yearly config:")]]`;
 
-      console.log(
-        "🎨 [CSS Handler] Running yearly config query:",
-        yearlyConfigQuery
-      );
       const yearlyResults = window.roamAlphaAPI.q(yearlyConfigQuery);
-      console.log(
-        "🎨 [CSS Handler] Yearly config query results:",
-        yearlyResults
-      );
-
       if (!yearlyResults || yearlyResults.length === 0) {
-        console.log(
-          "🎨 [CSS Handler] ❌ 'Yearly config:' section not found in config page"
-        );
         return {};
       }
 
       const yearlyConfigUid = yearlyResults[0][0];
-      console.log(
-        `🎨 [CSS Handler] ✅ Found 'Yearly config:' section with UID: ${yearlyConfigUid}`
-      );
 
-      // Get all child blocks of the "Yearly config:" block
+      // Get all child blocks of the "Yearly config:" section
       const childQuery = `[:find ?childString :where 
                           [?parent :block/uid "${yearlyConfigUid}"] 
                           [?child :block/parents ?parent]
                           [?child :block/string ?childString]]`;
 
-      console.log("🎨 [CSS Handler] Running child query:", childQuery);
       const childResults = window.roamAlphaAPI.q(childQuery);
-      console.log("🎨 [CSS Handler] Child query results:", childResults);
-
       if (!childResults || childResults.length === 0) {
-        console.log(
-          "🎨 [CSS Handler] ❌ No child blocks found under 'Yearly config:'"
-        );
         return {};
       }
-
-      console.log(
-        `🎨 [CSS Handler] ✅ Found ${childResults.length} config entries to parse`
-      );
 
       const config = {};
 
       // Parse each config line: "yv1:: Family Birthdays,c41d69,ffe6f0,🎂"
-      childResults.forEach(([configLine], index) => {
-        console.log(
-          `🎨 [CSS Handler] Parsing line ${index + 1}: "${configLine}"`
-        );
+      childResults.forEach(([configLine]) => {
         const parsed = this.parseConfigLine(configLine);
-        console.log(`🎨 [CSS Handler] Parsed result:`, parsed);
         if (parsed) {
           config[parsed.tag] = parsed.config;
-          console.log(
-            `🎨 [CSS Handler] ✅ Added to config: ${parsed.tag}`,
-            parsed.config
-          );
         }
       });
 
-      console.log(`🎨 [CSS Handler] ✅ Final parsed config:`, config);
       return config;
     } catch (error) {
-      console.error(
-        "🎨 [CSS Handler] ❌ Error loading config from page:",
-        error
-      );
+      console.error("❌ Error loading config from Calendar Suite page:", error);
       return {};
     }
   }
 
   parseConfigLine(configLine) {
     try {
-      console.log(
-        `🎨 [CSS Handler] parseConfigLine called with: "${configLine}"`
-      );
-
       // Expected format: "yv1:: Family Birthdays,c41d69,ffe6f0,🎂"
       const match = configLine.match(
         /^([a-z0-9]+)::\s*([^,]+),([a-fA-F0-9]{6}),([a-fA-F0-9]{6}),(.+)$/
       );
 
-      console.log(`🎨 [CSS Handler] Regex match result:`, match);
-
       if (!match) {
-        console.log(
-          `🎨 [CSS Handler] ⚠️ Could not parse config line: "${configLine}"`
-        );
-        console.log(
-          `🎨 [CSS Handler] Expected format: "tag:: Label,color1,color2,emoji"`
-        );
         return null;
       }
 
-      const [fullMatch, tag, label, primaryColor, secondaryColor, emoji] =
-        match;
-      console.log(`🎨 [CSS Handler] Extracted parts:`, {
-        fullMatch,
-        tag,
-        label,
-        primaryColor,
-        secondaryColor,
-        emoji,
-      });
+      const [, tag, label, primaryColor, secondaryColor, emoji] = match;
 
-      const parsed = {
+      return {
         tag: tag.toLowerCase(),
         config: {
           label: label.trim(),
@@ -196,14 +104,8 @@ class CalendarTagCSSHandler {
           enabled: true,
         },
       };
-
-      console.log(`🎨 [CSS Handler] ✅ Successfully parsed:`, parsed);
-      return parsed;
     } catch (error) {
-      console.error(
-        `🎨 [CSS Handler] ❌ Error parsing config line "${configLine}":`,
-        error
-      );
+      console.error(`❌ Error parsing calendar tag config line:`, error);
       return null;
     }
   }
@@ -232,7 +134,6 @@ class CalendarTagCSSHandler {
  * 🎯 YEARLY VIEW - DYNAMIC CALENDAR TAG CSS
  * Generated: ${new Date().toISOString()}
  * Source: [[${this.configPageTitle}]]
- * Tags: ${enabledTags.map(([tag]) => tag).join(", ")}
  * ===================================================================*/
 
 /* Base styling for all calendar tags - hide original text */
@@ -285,10 +186,10 @@ ${afterSelectors.join(",\n")} {
 
 `;
 
-    // Individual tag rules with circular badge styling (swapped colors)
+    // Individual tag rules with circular badge styling
     enabledTags.forEach(([tag, config]) => {
       css += `
-/* ${config.label} (${tag}) - Circular Badge */
+/* ${config.label} (${tag}) */
 span.rm-page-ref--tag[data-tag="${tag}"]::before {
   content: "${config.emoji}";
   background-color: ${config.secondaryColor};
@@ -311,104 +212,54 @@ span.rm-page-ref--tag[data-tag="${tag}"]:hover::after {
 
   generateAndInjectCSS() {
     try {
-      console.log("🎨 [CSS Handler] generateAndInjectCSS() called");
-      console.log("🎨 [CSS Handler] Current config:", this.currentConfig);
-
       // Remove existing style if present
       if (this.styleElement) {
-        console.log("🎨 [CSS Handler] Removing existing style element");
         this.styleElement.remove();
       }
 
       // Generate new CSS
-      console.log("🎨 [CSS Handler] Generating CSS...");
       const css = this.generateCSS();
-      console.log(
-        "🎨 [CSS Handler] Generated CSS length:",
-        css ? css.length : 0
-      );
-      console.log(
-        "🎨 [CSS Handler] Generated CSS preview:",
-        css ? css.slice(0, 500) + "..." : "NO CSS"
-      );
 
       if (!css) {
-        console.log("🎨 [CSS Handler] ⚠️ No CSS generated, skipping injection");
         return false;
       }
 
       // Inject new CSS
-      console.log("🎨 [CSS Handler] Creating and injecting style element...");
       this.styleElement = document.createElement("style");
       this.styleElement.id = "yearly-view-calendar-tag-css";
       this.styleElement.textContent = css;
       document.head.appendChild(this.styleElement);
 
-      console.log("🎨 [CSS Handler] Style element created:", this.styleElement);
-      console.log(
-        "🎨 [CSS Handler] Style element in DOM:",
-        document.getElementById("yearly-view-calendar-tag-css")
-      );
-
       // Register for cleanup
       if (window._calendarRegistry) {
         window._calendarRegistry.elements.push(this.styleElement);
-        console.log("🎨 [CSS Handler] Registered with calendar registry");
-      } else {
-        console.log("🎨 [CSS Handler] ⚠️ Calendar registry not found");
       }
 
       const tagCount = Object.keys(this.currentConfig).length;
-      console.log(
-        `🎨 [CSS Handler] ✅ Calendar tag CSS applied with ${tagCount} tags`
-      );
+      console.log(`✅ Calendar tag CSS applied with ${tagCount} tags`);
       return true;
     } catch (error) {
-      console.error(
-        "🎨 [CSS Handler] ❌ Error injecting calendar tag CSS:",
-        error
-      );
+      console.error("❌ Error injecting calendar tag CSS:", error);
       return false;
     }
   }
 
   async initialize() {
     try {
-      console.log("🎨 [CSS Handler] initialize() called");
-      console.log(
-        "🎨 [CSS Handler] Starting Calendar Tag CSS Handler initialization..."
-      );
-
       // Load configuration from Calendar Suite config page
-      console.log("🎨 [CSS Handler] Loading configuration...");
       await this.loadConfiguration();
-      console.log(
-        "🎨 [CSS Handler] Configuration loaded, current config:",
-        this.currentConfig
-      );
 
       // Generate and inject CSS
-      console.log("🎨 [CSS Handler] Generating and injecting CSS...");
       const success = this.generateAndInjectCSS();
-      console.log("🎨 [CSS Handler] CSS injection result:", success);
 
       if (success) {
-        console.log(
-          "🎨 [CSS Handler] ✅ Calendar Tag CSS Handler initialized successfully"
-        );
+        console.log("✅ Dynamic calendar tag CSS initialized");
         return true;
       } else {
-        console.log(
-          "🎨 [CSS Handler] ⚠️ CSS Handler initialized but no CSS was generated"
-        );
         return false;
       }
     } catch (error) {
-      console.error(
-        "🎨 [CSS Handler] ❌ Failed to initialize Calendar Tag CSS Handler:",
-        error
-      );
-      console.error("🎨 [CSS Handler] Error stack:", error.stack);
+      console.error("❌ Failed to initialize calendar tag CSS:", error);
       return false;
     }
   }
@@ -450,7 +301,7 @@ function checkRequiredDependencies() {
 }
 
 // ===================================================================
-// 🏷️ TAG CONFIGURATION LOADING (Enhanced)
+// 🏷️ TAG CONFIGURATION LOADING
 // ===================================================================
 
 async function loadYearlyTagConfiguration() {
@@ -518,7 +369,6 @@ async function fetchClojureScriptComponent() {
       error.message
     );
 
-    // Return fallback component
     return `\`\`\`clojure
 (ns yearly-view-v2.fallback)
 
@@ -916,7 +766,7 @@ function registerWithCalendarFoundation() {
 }
 
 // ===================================================================
-// 🎛️ ENHANCED COMMAND PALETTE WITH CSS COMMANDS
+// 🎛️ COMMAND PALETTE
 // ===================================================================
 
 function setupCommands() {
@@ -984,124 +834,30 @@ function setupCommands() {
         }
       },
     },
-    // ===================================================================
-    // 🎨 CALENDAR TAG CSS COMMANDS
-    // ===================================================================
     {
-      label: "CSS DEBUG: Full Diagnostic",
-      callback: async () => {
-        console.group("🎨 [CSS DIAGNOSTIC] Full CSS Handler Diagnostic");
-
-        console.log(
-          "1. CSS Handler existence:",
-          !!window._yearlyViewCSSHandler
-        );
-        if (window._yearlyViewCSSHandler) {
-          console.log(
-            "2. CSS Handler config page:",
-            window._yearlyViewCSSHandler.configPageTitle
-          );
-          console.log(
-            "3. Current config:",
-            window._yearlyViewCSSHandler.currentConfig
-          );
-          console.log(
-            "4. Style element:",
-            window._yearlyViewCSSHandler.styleElement
-          );
-          console.log(
-            "5. Style element in DOM:",
-            document.getElementById("yearly-view-calendar-tag-css")
-          );
-
-          console.log("6. Testing configuration reload...");
-          await window._yearlyViewCSSHandler.loadConfiguration();
-          console.log(
-            "7. Config after reload:",
-            window._yearlyViewCSSHandler.currentConfig
-          );
-
-          console.log("8. Testing CSS generation...");
-          const css = window._yearlyViewCSSHandler.generateCSS();
-          console.log("9. Generated CSS length:", css ? css.length : 0);
-
-          console.log("10. Testing CSS injection...");
-          const injectResult =
-            window._yearlyViewCSSHandler.generateAndInjectCSS();
-          console.log("11. Injection result:", injectResult);
-        }
-
-        console.groupEnd();
-        alert("🎨 Full CSS diagnostic complete - check console for details");
-      },
-    },
-    {
-      label: "Calendar Tags: Reload Tag Styling",
+      label: "Calendar Tags: Reload Styling",
       callback: async () => {
         if (window._yearlyViewCSSHandler) {
           await window._yearlyViewCSSHandler.loadConfiguration();
           window._yearlyViewCSSHandler.generateAndInjectCSS();
-          alert("✅ Calendar tag styling reloaded from config page!");
+          alert("✅ Calendar tag styling reloaded!");
         } else {
           alert("❌ CSS Handler not initialized.");
         }
       },
     },
     {
-      label: "Calendar Tags: Show Current Config",
+      label: "Calendar Tags: Show Config Status",
       callback: () => {
         if (window._yearlyViewCSSHandler) {
-          console.group("🎯 Calendar Tag Configuration");
-          console.log(
-            "Current Config:",
-            window._yearlyViewCSSHandler.currentConfig
-          );
-          console.log(
-            "Style Element:",
-            window._yearlyViewCSSHandler.styleElement
-          );
-          console.log(
-            "Config Source:",
-            window._yearlyViewCSSHandler.configPageTitle
-          );
-          console.groupEnd();
-
           const tagCount = Object.keys(
             window._yearlyViewCSSHandler.currentConfig
           ).length;
+          const hasCSS = !!window._yearlyViewCSSHandler.styleElement;
           alert(
-            `📊 Calendar tag config loaded to console.\n\n${tagCount} tags configured from [[${window._yearlyViewCSSHandler.configPageTitle}]]`
-          );
-        } else {
-          alert("❌ CSS Handler not initialized.");
-        }
-      },
-    },
-    {
-      label: "Calendar Tags: Toggle Debug Mode",
-      callback: () => {
-        if (window._yearlyViewCSSHandler) {
-          window._yearlyViewCSSHandler.debugMode =
-            !window._yearlyViewCSSHandler.debugMode;
-          alert(
-            `🔍 Debug mode ${
-              window._yearlyViewCSSHandler.debugMode ? "enabled" : "disabled"
-            } for CSS Handler`
-          );
-        } else {
-          alert("❌ CSS Handler not initialized.");
-        }
-      },
-    },
-    {
-      label: "Calendar Tags: Test CSS Injection",
-      callback: () => {
-        if (window._yearlyViewCSSHandler) {
-          const success = window._yearlyViewCSSHandler.generateAndInjectCSS();
-          alert(
-            success
-              ? "✅ CSS injection test successful!"
-              : "❌ CSS injection test failed. Check console."
+            `📊 Calendar Tag Status:\n\n${tagCount} tags configured\nCSS ${
+              hasCSS ? "active" : "inactive"
+            }\n\nSource: [[${window._yearlyViewCSSHandler.configPageTitle}]]`
           );
         } else {
           alert("❌ CSS Handler not initialized.");
@@ -1121,14 +877,12 @@ function setupCommands() {
 }
 
 // ===================================================================
-// 🚀 MAIN EXTENSION OBJECT WITH INTEGRATED CSS HANDLER
+// 🚀 MAIN EXTENSION OBJECT
 // ===================================================================
 
 const extension = {
   onload: async () => {
-    console.log(
-      "🗓️ Yearly View Extension 2.0 with Dynamic CSS - Production Ready loading..."
-    );
+    console.log("🗓️ Yearly View Extension 2.0 - Production Ready loading...");
 
     try {
       // Step 1: Verify dependencies
@@ -1160,40 +914,19 @@ const extension = {
         };
       }
 
-      // Step 6: Initialize Calendar Tag CSS Handler (NEW)
-      console.log("🎨 Initializing integrated calendar tag CSS handler...");
+      // Step 6: Initialize Calendar Tag CSS Handler
       let cssHandlerSuccess = false;
       try {
-        console.log("🎨 Creating CSS Handler instance...");
         window._yearlyViewCSSHandler = new CalendarTagCSSHandler();
-        console.log(
-          "🎨 CSS Handler instance created:",
-          window._yearlyViewCSSHandler
-        );
-
-        console.log("🎨 Calling CSS Handler initialize...");
         cssHandlerSuccess = await window._yearlyViewCSSHandler.initialize();
-        console.log("🎨 CSS Handler initialize returned:", cssHandlerSuccess);
-
-        if (cssHandlerSuccess) {
-          console.log("🎨 ✅ CSS Handler initialized successfully");
-        } else {
-          console.log("🎨 ⚠️ CSS Handler initialization returned false");
-        }
       } catch (cssError) {
-        console.error(
-          "🎨 ❌ CSS Handler initialization failed with error:",
-          cssError
-        );
-        console.error("🎨 Error stack:", cssError.stack);
+        console.warn("⚠️ CSS Handler initialization failed:", cssError.message);
       }
 
-      // Step 7: Setup commands (enhanced with CSS commands)
+      // Step 7: Setup commands
       const commands = setupCommands();
 
-      console.log(
-        "✅ Yearly View Extension 2.0 with Dynamic CSS loaded successfully!"
-      );
+      console.log("✅ Yearly View Extension 2.0 loaded successfully!");
       console.log(`🎯 Component UID: ${componentResult.componentUid}`);
       console.log(
         `🎯 Page Detection: ${pageDetectionSetup ? "Active" : "Fallback mode"}`
@@ -1210,9 +943,6 @@ const extension = {
       );
       console.log(
         "🚀 Visit year pages like [[2024]], [[2025]] to deploy calendars"
-      );
-      console.log(
-        "🎨 Calendar tags will display as circular badges with colors from your config"
       );
     } catch (error) {
       console.error("❌ Yearly View Extension failed to load:", error);
@@ -1234,7 +964,6 @@ const extension = {
       window._yearlyViewCSSHandler.styleElement
     ) {
       window._yearlyViewCSSHandler.styleElement.remove();
-      console.log("🗑️ Removed calendar tag CSS");
     }
 
     // Clean up global references
