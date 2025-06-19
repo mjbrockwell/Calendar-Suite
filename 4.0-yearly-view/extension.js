@@ -588,71 +588,14 @@ async function createComponentHierarchyWithCascading(componentCode) {
   );
 }
 
-// 🚀 ENHANCED DEPLOYMENT FUNCTION USING CASCADING UTILITY
+// 🚀 SIMPLIFIED DEPLOYMENT FUNCTION USING PURE CASCADING UTILITY
 async function deployYearlyViewComponentWithCascading() {
   console.log(
-    "🚀 CASCADING: Starting component deployment with local cascading utility..."
+    "🚀 CASCADING: Starting component deployment with pure cascading utility..."
   );
 
   try {
-    // Check for existing component first using the original search logic
-    console.log("🔍 CASCADING: Checking for existing components...");
-    const existing = findExistingYearlyViewComponent();
-
-    if (existing) {
-      console.log(
-        "✅ CASCADING: Found existing component, checking if it needs updating..."
-      );
-
-      const existingBlockQuery = `[:find ?string . :where [?b :block/uid "${existing.uid}"] [?b :block/string ?string]]`;
-      const existingBlock = window.roamAlphaAPI.q(existingBlockQuery);
-
-      const isPlaceholder =
-        existingBlock && existingBlock.includes("Hello, World!");
-      console.log("🔍 CASCADING: Is placeholder component?", isPlaceholder);
-
-      if (isPlaceholder) {
-        console.log("📦 CASCADING: Updating placeholder to real component...");
-        try {
-          const realComponentCode = await fetchClojureScriptComponent();
-          await window.roamAlphaAPI.data.block.update({
-            block: { uid: existing.uid, string: realComponentCode },
-          });
-
-          console.log(
-            "✅ CASCADING: Successfully updated placeholder to real component!"
-          );
-          window._yearlyViewComponentUid = existing.uid;
-          return {
-            componentUid: existing.uid,
-            renderString: existing.renderString,
-          };
-        } catch (error) {
-          console.error("❌ CASCADING: Failed to update component:", error);
-          window._yearlyViewComponentUid = existing.uid;
-          return {
-            componentUid: existing.uid,
-            renderString: existing.renderString,
-          };
-        }
-      } else {
-        console.log(
-          "✅ CASCADING: Real component already deployed, skipping creation"
-        );
-        window._yearlyViewComponentUid = existing.uid;
-        return {
-          componentUid: existing.uid,
-          renderString: existing.renderString,
-        };
-      }
-    }
-
-    // Deploy new component using cascading utility
-    console.log(
-      "🆕 CASCADING: No existing component found, deploying new one..."
-    );
-
-    // Fetch the real component from GitHub
+    // Fetch the real component from GitHub first
     console.log("🌐 CASCADING: Fetching component from GitHub...");
     const componentCode = await fetchClojureScriptComponent();
     console.log(
@@ -660,8 +603,10 @@ async function deployYearlyViewComponentWithCascading() {
       componentCode.length
     );
 
-    // Use the cascading utility to create the entire hierarchy
-    console.log("🏗️ CASCADING: Using cascading utility to create hierarchy...");
+    // Use the pure cascading utility to handle everything
+    console.log(
+      "🏗️ CASCADING: Using pure cascading utility to handle find-or-create..."
+    );
     const componentUid = await createComponentHierarchyWithCascading(
       componentCode
     );
@@ -685,7 +630,7 @@ async function deployYearlyViewComponentWithCascading() {
     return {
       componentUid: componentUid,
       renderString: `{{roam/render: ((${componentUid}))}}`,
-      method: "cascading-utility",
+      method: "pure-cascading-utility",
     };
   } catch (error) {
     console.error("❌ CASCADING: Component deployment failed:", error);
