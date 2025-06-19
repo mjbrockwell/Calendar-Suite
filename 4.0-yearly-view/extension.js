@@ -407,93 +407,137 @@ function getComponentUid() {
 function findExistingYearlyViewComponent() {
   console.log("🔍 Searching for existing Yearly View 2.0 component...");
 
-  // Search patterns for both old and new components
-  const searchStrings = [
-    // New real component patterns
-    "yearly-view-v2.core",
-    "Interactive Yearly Calendar",
-    "defn yearly-view",
-    // Old placeholder patterns (for backwards compatibility)
-    "Hello, World! I am the Yearly View 2.0 placeholder component",
-    "ns yearlyview2.hello",
-    "defn main",
-  ];
+  try {
+    // METHOD 1: Search by exact location in the hierarchy
+    console.log("🔍 METHOD 1: Searching by hierarchy location...");
 
-  console.log("🔍 DEBUG: Starting search with patterns:", searchStrings);
+    // First, find the roam/render page
+    const renderPageUid =
+      window.CalendarUtilities.RoamUtils.getPageUid("roam/render");
+    if (renderPageUid) {
+      console.log("✅ Found roam/render page:", renderPageUid);
 
-  for (const searchStr of searchStrings) {
-    console.log(`🔍 DEBUG: Searching for pattern: "${searchStr}"`);
+      // Search for the specific hierarchy path
+      const hierarchyQuery = `[:find ?uid ?string :where 
+                               [?page :block/uid "${renderPageUid}"]
+                               [?ext :block/parents ?page]
+                               [?ext :block/string "**Components added by Extensions:**"]
+                               [?cal :block/parents ?ext]
+                               [?cal :block/string "**Added by Calendar Suite extension:**"]
+                               [?yearly :block/parents ?cal]
+                               [?yearly :block/string "**Yearly View 2.0:**"]
+                               [?comp :block/parents ?yearly]
+                               [?comp :block/uid ?uid]
+                               [?comp :block/string ?string]]`;
 
-    try {
-      // DEBUG: Check if queryBlocks function exists
-      if (!window.CalendarUtilities?.RoamUtils?.queryBlocks) {
-        console.warn(
-          "❌ DEBUG: CalendarUtilities.RoamUtils.queryBlocks not available"
-        );
-        console.log("🔍 DEBUG: CalendarUtilities:", window.CalendarUtilities);
+      console.log("🔍 Hierarchy query:", hierarchyQuery);
+      const hierarchyResults = window.roamAlphaAPI.q(hierarchyQuery);
+      console.log("🔍 Hierarchy results:", hierarchyResults);
+
+      if (hierarchyResults && hierarchyResults.length > 0) {
+        const componentUid = hierarchyResults[0][0];
+        const componentContent = hierarchyResults[0][1];
+
+        console.log("✅ Found component via hierarchy!");
+        console.log("🔍 Component UID:", componentUid);
         console.log(
-          "🔍 DEBUG: RoamUtils:",
-          window.CalendarUtilities?.RoamUtils
+          "🔍 Content preview:",
+          componentContent.substring(0, 200) + "..."
         );
-
-        // Try alternative search method using Roam API directly
-        console.log("🔄 DEBUG: Trying alternative search with Roam API...");
-        const query = `[:find ?uid ?string :where 
-                        [?block :block/uid ?uid] 
-                        [?block :block/string ?string] 
-                        [(clojure.string/includes? ?string "${searchStr}")]]`;
-
-        console.log("🔍 DEBUG: Using query:", query);
-        const results = window.roamAlphaAPI.q(query);
-        console.log("🔍 DEBUG: Query results:", results);
-
-        if (results && results.length > 0) {
-          console.log(
-            `✅ DEBUG: Found existing component via direct API with pattern: "${searchStr}"`
-          );
-          console.log("🔍 DEBUG: Found block UID:", results[0][0]);
-          console.log(
-            "🔍 DEBUG: Found block content preview:",
-            results[0][1].substring(0, 100) + "..."
-          );
-
-          return {
-            uid: results[0][0],
-            renderString: `{{roam/render: ((${results[0][0]}))}}`,
-          };
-        }
-
-        continue; // Try next search pattern
-      }
-
-      // Original search method
-      const blocks = window.CalendarUtilities.RoamUtils.queryBlocks(
-        null,
-        searchStr
-      );
-
-      console.log(`🔍 DEBUG: queryBlocks result for "${searchStr}":`, blocks);
-      console.log(`🔍 DEBUG: Found ${blocks ? blocks.length : 0} blocks`);
-
-      if (blocks && blocks.length > 0) {
-        console.log(`✅ Found existing component via: "${searchStr}"`);
-        console.log("🔍 DEBUG: First block:", blocks[0]);
-        console.log("🔍 DEBUG: Block UID:", blocks[0].uid);
 
         return {
-          uid: blocks[0].uid,
-          renderString: `{{roam/render: ((${blocks[0].uid}))}}`,
+          uid: componentUid,
+          renderString: `{{roam/render: ((${componentUid}))}}`,
+        };
+      }
+    }
+
+    // METHOD 2: Search for code blocks containing ClojureScript namespace
+    console.log("🔍 METHOD 2: Searching for code blocks with namespace...");
+
+    const codeBlockQuery = `[:find ?uid ?string :where 
+                             [?block :block/uid ?uid] 
+                             [?block :block/string ?string] 
+                             [(clojure.string/includes? ?string "\`\`\`clojure")]
+                             [(clojure.string/includes? ?string "yearly-view-v2.core")]]`;
+
+    console.log("🔍 Code block query:", codeBlockQuery);
+    const codeResults = window.roamAlphaAPI.q(codeBlockQuery);
+    console.log("🔍 Code block results:", codeResults);
+
+    if (codeResults && codeResults.length > 0) {
+      const componentUid = codeResults[0][0];
+      const componentContent = codeResults[0][1];
+
+      console.log("✅ Found component via code block search!");
+      console.log("🔍 Component UID:", componentUid);
+      console.log(
+        "🔍 Content preview:",
+        componentContent.substring(0, 200) + "..."
+      );
+
+      return {
+        uid: componentUid,
+        renderString: `{{roam/render: ((${componentUid}))}}`,
+      };
+    }
+
+    // METHOD 3: Search using stored UID if available
+    console.log("🔍 METHOD 3: Checking stored UID...");
+    if (window._yearlyViewComponentUid) {
+      console.log("🔍 Found stored UID:", window._yearlyViewComponentUid);
+
+      // Verify it still exists
+      const verifyQuery = `[:find ?string . :where [?b :block/uid "${window._yearlyViewComponentUid}"] [?b :block/string ?string]]`;
+      const verifyResult = window.roamAlphaAPI.q(verifyQuery);
+
+      if (verifyResult) {
+        console.log("✅ Stored UID still valid!");
+        return {
+          uid: window._yearlyViewComponentUid,
+          renderString: `{{roam/render: ((${window._yearlyViewComponentUid}))}}`,
         };
       } else {
-        console.log(`❌ DEBUG: No blocks found for pattern: "${searchStr}"`);
+        console.log("❌ Stored UID no longer valid, clearing...");
+        delete window._yearlyViewComponentUid;
       }
-    } catch (error) {
-      console.error(`❌ DEBUG: Error searching for "${searchStr}":`, error);
     }
-  }
 
-  console.log("❌ DEBUG: No existing component found with any search pattern");
-  return null;
+    // METHOD 4: Broad search for any ClojureScript components
+    console.log("🔍 METHOD 4: Broad search for ClojureScript components...");
+
+    const broadQuery = `[:find ?uid ?string :where 
+                         [?block :block/uid ?uid] 
+                         [?block :block/string ?string] 
+                         [(clojure.string/includes? ?string "ns yearly-view")]]`;
+
+    console.log("🔍 Broad query:", broadQuery);
+    const broadResults = window.roamAlphaAPI.q(broadQuery);
+    console.log("🔍 Broad results:", broadResults);
+
+    if (broadResults && broadResults.length > 0) {
+      const componentUid = broadResults[0][0];
+      const componentContent = broadResults[0][1];
+
+      console.log("✅ Found component via broad search!");
+      console.log("🔍 Component UID:", componentUid);
+      console.log(
+        "🔍 Content preview:",
+        componentContent.substring(0, 200) + "..."
+      );
+
+      return {
+        uid: componentUid,
+        renderString: `{{roam/render: ((${componentUid}))}}`,
+      };
+    }
+
+    console.log("❌ No existing component found with any search method");
+    return null;
+  } catch (error) {
+    console.error("❌ Error in findExistingYearlyViewComponent:", error);
+    return null;
+  }
 }
 
 async function deployYearlyViewComponent() {
