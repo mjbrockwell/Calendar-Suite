@@ -480,39 +480,108 @@ function closeInstaller() {
   }
 }
 
+// Dismiss the installer button
+function dismissInstallerButton() {
+  const buttonContainer = document.getElementById(
+    "calendar-installer-container"
+  );
+  if (buttonContainer) {
+    buttonContainer.style.display = "none";
+    // Store dismissal preference
+    localStorage.setItem("calendar-installer-dismissed", "true");
+    console.log("📅 Calendar Suite Installer button dismissed");
+  }
+}
+
+// Show the installer button (in case user wants to bring it back)
+function showInstallerButton() {
+  const buttonContainer = document.getElementById(
+    "calendar-installer-container"
+  );
+  if (buttonContainer) {
+    buttonContainer.style.display = "block";
+    localStorage.removeItem("calendar-installer-dismissed");
+  }
+}
+
 // Add installer button to Roam
 function addInstallerButton() {
-  const button = document.createElement("button");
-  button.id = "calendar-installer-btn";
-  button.textContent = "📅 Install Calendar Suite";
-  button.style.cssText = `
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 1000;
-    padding: 8px 12px;
-    background: linear-gradient(135deg, #845ec2, #6c5ce7);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transition: all 0.2s;
+  // Check if user has dismissed the button
+  if (localStorage.getItem("calendar-installer-dismissed") === "true") {
+    console.log(
+      "📅 Calendar Suite Installer button dismissed by user, not showing"
+    );
+    return;
+  }
+
+  const containerHTML = `
+    <div id="calendar-installer-container" style="
+      position: fixed;
+      top: 70px;
+      right: 10px;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    ">
+      <button id="calendar-installer-btn" style="
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #845ec2, #6c5ce7);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        transition: all 0.2s;
+      ">📅 Install Calendar Suite</button>
+      <button id="calendar-installer-dismiss" style="
+        width: 20px;
+        height: 20px;
+        background: rgba(108, 117, 125, 0.8);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        font-size: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        line-height: 1;
+        padding: 0;
+      " title="Dismiss installer button">×</button>
+    </div>
   `;
 
-  button.addEventListener("click", createInstallerModal);
-  button.addEventListener("mouseover", () => {
-    button.style.transform = "translateY(-1px)";
-    button.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
+  document.body.insertAdjacentHTML("beforeend", containerHTML);
+
+  const installerBtn = document.getElementById("calendar-installer-btn");
+  const dismissBtn = document.getElementById("calendar-installer-dismiss");
+
+  // Main button event listeners
+  installerBtn.addEventListener("click", createInstallerModal);
+  installerBtn.addEventListener("mouseover", () => {
+    installerBtn.style.transform = "translateY(-1px)";
+    installerBtn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
   });
-  button.addEventListener("mouseout", () => {
-    button.style.transform = "translateY(0)";
-    button.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+  installerBtn.addEventListener("mouseout", () => {
+    installerBtn.style.transform = "translateY(0)";
+    installerBtn.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
   });
 
-  document.body.appendChild(button);
+  // Dismiss button event listeners
+  dismissBtn.addEventListener("click", dismissInstallerButton);
+  dismissBtn.addEventListener("mouseover", () => {
+    dismissBtn.style.background = "rgba(220, 53, 69, 0.8)";
+    dismissBtn.style.transform = "scale(1.1)";
+  });
+  dismissBtn.addEventListener("mouseout", () => {
+    dismissBtn.style.background = "rgba(108, 117, 125, 0.8)";
+    dismissBtn.style.transform = "scale(1)";
+  });
+
   console.log("📅 Calendar Suite Installer button added");
 }
 
@@ -528,7 +597,24 @@ export default {
     // Add installer button
     addInstallerButton();
 
+    // Add command palette command to show installer button
+    extensionAPI.ui.commandPalette.addCommand({
+      label: "📅 Show Calendar Suite Installer",
+      callback: () => {
+        showInstallerButton();
+        console.log(
+          "📅 Calendar Suite Installer button restored via command palette"
+        );
+      },
+    });
+
+    // Add global function to re-show button if needed (fallback)
+    window.showCalendarInstaller = showInstallerButton;
+
     console.log("✅ Calendar Suite Installer Ready!");
+    console.log(
+      "💡 Tip: If you dismissed the button, use Cmd+P and search for 'Show Calendar Suite Installer'"
+    );
   },
 
   onunload: () => {
@@ -548,10 +634,15 @@ export default {
 
     // Clean up UI
     closeInstaller();
-    const installerBtn = document.getElementById("calendar-installer-btn");
-    if (installerBtn) {
-      installerBtn.remove();
+    const installerContainer = document.getElementById(
+      "calendar-installer-container"
+    );
+    if (installerContainer) {
+      installerContainer.remove();
     }
+
+    // Clean up global function
+    delete window.showCalendarInstaller;
 
     // Reset state
     loadedExtensions.clear();
