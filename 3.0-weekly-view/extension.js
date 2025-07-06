@@ -1,41 +1,33 @@
 // ===================================================================
-// 📅 WEEKLY VIEW EXTENSION v4.0 - MODERNIZED ARCHITECTURE
+// 📅 WEEKLY VIEW EXTENSION v5.0 - BUTTON MANAGER INTEGRATION
 // ===================================================================
-// 🔥 BREAKING CHANGE: Fully integrated with Calendar Foundation v2.0
-// ✅ Central page detection • ✅ Event-driven • ✅ Dependency injection
-// 🚀 96% reduction in polling overhead • Zero manual observers
+// 🚀 MAJOR REWRITE: Integrated with Simple Button Manager v3.2+
+// ✅ Centralized button management • ✅ Automatic page detection
+// 🎨 Calendar Suite styling • 🧹 Simplified architecture
+// 🔥 BREAKING CHANGE: Removed multi-step button workflow (simplified)
 
 // Wrap everything in an IIFE to avoid global variable conflicts
 (function () {
   "use strict";
 
   // ===================================================================
-  // 🎯 EXTENSION CONFIGURATION - Declarative Architecture
+  // 🎯 EXTENSION CONFIGURATION
   // ===================================================================
 
   const EXTENSION_CONFIG = {
     id: "weekly-view",
-    version: "4.0.0",
+    version: "5.0.0",
     name: "Weekly View",
     description:
-      "Auto-detects weekly calendar pages and offers to populate with monthly calendar embeds (Modernized Architecture)",
+      "Creates weekly calendar views with monthly calendar embeds (Button Manager Integration)",
 
-    // 🔧 DEPENDENCIES - Auto-injected by Calendar Foundation
+    // 🔧 DEPENDENCIES - Required for operation
     dependencies: [
+      "simple-button-manager",
       "calendar-foundation",
       "calendar-utilities",
       "unified-config-utils",
     ],
-
-    // 🎯 PAGE PATTERNS - Central page detector will match these
-    pagePatterns: {
-      weekly: {
-        detect: (pageTitle) =>
-          CalendarUtilities.WeeklyUtils.isWeeklyPage(pageTitle),
-        priority: 100,
-        cooldown: 500, // ms before re-checking same page
-      },
-    },
 
     // 📋 CONFIG DEFAULTS - Managed by unified config system
     configDefaults: {
@@ -45,113 +37,36 @@
       "add query for `[[Evening Reflections]]`": "yes",
       "add Plus-Minus-Next journal": "yes",
     },
+  };
 
-    // 🎨 UI COMPONENTS - Provided capabilities
-    provides: [
-      "weekly-view-creation",
-      "weekly-page-detection",
-      "monthly-dependency-checking",
-      "morning-intentions-query",
-      "evening-reflections-query",
-      "plus-minus-next-journal",
-    ],
+  // 🎯 CALENDAR SUITE STYLING: Pale sky blue with deep navy accents
+  const calendarButtonStyle = {
+    background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)", // Pale sky blue gradient
+    border: "1.5px solid #1e3a8a", // Deep navy border
+    color: "#1e3a8a", // Deep navy text
+    fontWeight: "600",
+    padding: "10px 16px",
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)", // Soft blue shadow
   };
 
   // ===================================================================
-  // 🏗️ EXTENSION STATE - Managed by Calendar Foundation
+  // 🏗️ EXTENSION STATE
   // ===================================================================
 
   let extensionState = {
     initialized: false,
-    currentPageTitle: null,
-    buttonElement: null,
+    buttonManager: null,
     config: null,
     dependencies: null,
   };
 
   // ===================================================================
-  // 🎯 PAGE DETECTION HANDLERS - Event-driven callbacks
-  // ===================================================================
-
-  async function handleWeeklyPageDetected(pageTitle, context = {}) {
-    try {
-      console.log(`📅 Weekly page detected: "${pageTitle}"`);
-
-      // Store current page
-      extensionState.currentPageTitle = pageTitle;
-
-      // Check if automatic guidance is enabled
-      const config = getExtensionConfig();
-      if (config.settings["automatic guidance enabled"] !== "yes") {
-        console.log("📅 Automatic guidance disabled, removing button");
-        removeWeeklyButton();
-        return;
-      }
-
-      // Check if we already have a button in progress
-      const existingButton = document.getElementById("weekly-view-button");
-      if (existingButton) {
-        const buttonState = existingButton.dataset.state;
-        console.log(`📅 Button already exists in state: ${buttonState}`);
-
-        // Don't interfere if button is in creating or navigating state
-        if (buttonState === "creating" || buttonState === "navigating") {
-          console.log(
-            `📅 Button is in ${buttonState} state, not disrupting workflow`
-          );
-          return;
-        }
-      }
-
-      // Check for embed blocks instead of empty page
-      const alreadyHasEmbeds = await hasEmbedBlocks(pageTitle);
-
-      if (!alreadyHasEmbeds) {
-        console.log(
-          `📅 Weekly page doesn't have embeds, checking dependencies...`
-        );
-        const pageIssues = await getMissingMonthlyPages(pageTitle);
-
-        if (pageIssues.length === 0) {
-          console.log("✅ All dependencies met, showing ready button");
-          showWeeklyButton(pageTitle, "ready", config);
-        } else {
-          console.log("⚠️ Page issues found, showing warning button");
-          showWeeklyButton(pageTitle, "warning", config, pageIssues);
-        }
-      } else {
-        console.log("📄 Weekly page already has embeds, removing button");
-        removeWeeklyButton();
-      }
-    } catch (error) {
-      console.error("❌ Error handling weekly page detection:", error);
-
-      // Emit error event for central error handling
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("extension:error", {
-          extension: EXTENSION_CONFIG.id,
-          error: error,
-          context: { pageTitle, handler: "handleWeeklyPageDetected" },
-        });
-      }
-    }
-  }
-
-  function handlePageChangeAway(pageTitle, context = {}) {
-    console.log(`📍 Navigated away from page: "${pageTitle}"`);
-
-    // Clean up button when leaving weekly pages
-    removeWeeklyButton();
-    extensionState.currentPageTitle = null;
-  }
-
-  // ===================================================================
-  // 📋 CONFIG MANAGEMENT - Using Central Config Cache
+  // 📋 CONFIG MANAGEMENT
   // ===================================================================
 
   function getExtensionConfig() {
     try {
-      // Use UnifiedConfigUtils directly for now (until central config cache available)
       if (!extensionState.config && window.UnifiedConfigUtils) {
         const config = {
           settings: {},
@@ -201,6 +116,180 @@
     } catch (error) {
       console.error("❌ Error initializing Weekly View config:", error);
       throw error;
+    }
+  }
+
+  // ===================================================================
+  // 🚀 WEEKLY CONTENT CREATION - Simplified Single-Step Process
+  // ===================================================================
+
+  async function createWeeklyContent(weeklyTitle) {
+    try {
+      console.log(`🚀 Creating weekly content for: "${weeklyTitle}"`);
+
+      // Check if page already has embeds
+      const alreadyHasEmbeds = await hasEmbedBlocks(weeklyTitle);
+      if (alreadyHasEmbeds) {
+        console.log("📄 Weekly page already has embeds, skipping creation");
+        alert(
+          "📄 This weekly page already has embed blocks. No action needed!"
+        );
+        return;
+      }
+
+      // Check dependencies
+      const pageIssues = await getMissingMonthlyPages(weeklyTitle);
+      if (pageIssues.length > 0) {
+        const issue = pageIssues[0];
+        console.log("⚠️ Missing dependencies:", pageIssues);
+
+        if (issue.reason === "missing") {
+          const createPage = confirm(
+            `📅 Missing monthly page: "${issue.page}"\n\nWould you like to create it first?`
+          );
+          if (createPage) {
+            await extensionState.dependencies.calendarUtilities.RoamUtils.createPage(
+              issue.page
+            );
+            alert(
+              `✅ Created "${issue.page}". Please run this again to complete the weekly view.`
+            );
+          }
+        } else {
+          const navigate = confirm(
+            `📅 Monthly page "${issue.page}" needs completion.\n\nWould you like to navigate there to complete it?`
+          );
+          if (navigate) {
+            await window.roamAlphaAPI.ui.mainWindow.openPage({
+              page: { title: issue.page },
+            });
+          }
+        }
+        return;
+      }
+
+      // Get the page UID
+      const pageUid = window.roamAlphaAPI.data.q(`
+        [:find ?uid .
+         :where 
+         [?e :node/title "${weeklyTitle}"]
+         [?e :block/uid ?uid]]
+      `);
+
+      if (!pageUid) {
+        throw new Error(`Could not find page UID for "${weeklyTitle}"`);
+      }
+
+      // Load config for enabled features
+      const config = getExtensionConfig();
+      let order = 0;
+
+      // 1. Add week count within the year (if enabled)
+      if (config.settings["add week count within the year"] === "yes") {
+        await addWeekCountInYearLine(pageUid, order, weeklyTitle);
+        order++;
+      }
+
+      // 2. Add morning intentions query (if enabled)
+      if (
+        config.settings["include query for `[[Morning Intentions]]`"] === "yes"
+      ) {
+        await addMorningIntentionsQuery(pageUid, order, weeklyTitle);
+        order++;
+      }
+
+      // Add divider before embeds
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": pageUid, order: order },
+        block: { string: "---" },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      order++;
+
+      // Find week blocks from monthly pages
+      const weekEmbeds = await findWeekBlocksForWeekly(weeklyTitle);
+
+      if (weekEmbeds.length === 0) {
+        throw new Error("No week blocks found in monthly pages");
+      }
+
+      // Add embeds in order
+      for (const embed of weekEmbeds) {
+        await window.roamAlphaAPI.data.block.create({
+          location: { "parent-uid": pageUid, order: order },
+          block: { string: `{{embed-path: ((${embed.uid}))}}` },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        order++;
+
+        console.log(
+          `✅ Added embed for ${embed.monthPage}: {{embed-path: ((${embed.uid}))}}`
+        );
+      }
+
+      // Add divider after embeds
+      await window.roamAlphaAPI.data.block.create({
+        location: { "parent-uid": pageUid, order: order },
+        block: { string: "---" },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      order++;
+
+      // 3. Add evening reflections query (if enabled) - AFTER EMBEDS
+      if (
+        config.settings["add query for `[[Evening Reflections]]`"] === "yes"
+      ) {
+        await addEveningReflectionsQuery(pageUid, order, weeklyTitle);
+        order++;
+      }
+
+      // 4. Add Plus-Minus-Next journal (if enabled) - LAST
+      if (config.settings["add Plus-Minus-Next journal"] === "yes") {
+        await addPlusMinusNextJournal(pageUid, order, weeklyTitle);
+        order++;
+      }
+
+      // Show success message
+      alert(
+        `🚀 Weekly view created successfully!\n\n✅ Added ${weekEmbeds.length} monthly calendar embeds\n✅ Configured with your preferences`
+      );
+
+      // Emit success event
+      if (CalendarSuite?.emit) {
+        CalendarSuite.emit("weekly-view:content-creation-success", {
+          pageTitle: weeklyTitle,
+          features: {
+            weekCount:
+              config.settings["add week count within the year"] === "yes",
+            morningIntentions:
+              config.settings["include query for `[[Morning Intentions]]`"] ===
+              "yes",
+            eveningReflections:
+              config.settings["add query for `[[Evening Reflections]]`"] ===
+              "yes",
+            plusMinusNext:
+              config.settings["add Plus-Minus-Next journal"] === "yes",
+            embedCount: weekEmbeds.length,
+          },
+        });
+      }
+
+      console.log(`🚀 Weekly content creation complete!`);
+    } catch (error) {
+      console.error("❌ Error creating weekly content:", error);
+
+      // Show user-friendly error message
+      alert(
+        `❌ Error creating weekly content:\n\n${error.message}\n\nCheck the console for details.`
+      );
+
+      // Emit error event
+      if (CalendarSuite?.emit) {
+        CalendarSuite.emit("weekly-view:content-creation-error", {
+          pageTitle: weeklyTitle,
+          error: error,
+        });
+      }
     }
   }
 
@@ -326,23 +415,23 @@
         missingPages.push({
           page: pageName,
           reason: "missing",
-          message: `Click to CREATE: ${pageName}`,
+          message: `Missing: ${pageName}`,
         });
       } else if (!status.populated) {
         // Page exists but is incomplete
         let message;
         switch (status.reason) {
           case "empty-page":
-            message = `${pageName} page empty - navigate to populate?`;
+            message = `${pageName} page empty`;
             break;
           case "missing-week-block":
-            message = `${pageName} incomplete - navigate to add week?`;
+            message = `${pageName} incomplete`;
             break;
           case "incomplete-structure":
-            message = `${pageName} structure incomplete - navigate to fix?`;
+            message = `${pageName} structure incomplete`;
             break;
           default:
-            message = `${pageName} incomplete - navigate to complete?`;
+            message = `${pageName} incomplete`;
         }
 
         incompletePages.push({
@@ -387,533 +476,6 @@
     } catch (error) {
       console.error(`Error checking embed blocks for "${pageTitle}":`, error);
       return false;
-    }
-  }
-
-  // ===================================================================
-  // 🦜 UI BUTTON MANAGEMENT - Using Central Event System
-  // ===================================================================
-
-  function showWeeklyButton(pageTitle, state, config, pageIssues = []) {
-    // Remove existing button first
-    removeWeeklyButton();
-
-    const isWarning = state === "warning";
-    const firstIssue = pageIssues[0];
-
-    // Create button element
-    const button = document.createElement("div");
-    button.id = "weekly-view-button";
-
-    // Button styles
-    const baseStyles = `
-      position: fixed;
-      top: 60px;
-      right: 20px;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      cursor: pointer;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 10000;
-      transition: all 0.2s ease;
-      border: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      max-width: 360px;
-    `;
-
-    const readyBackground = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-    const warningBackground =
-      "linear-gradient(135deg, #ea580c 0%, #c2410c 100%)";
-
-    button.style.cssText =
-      baseStyles +
-      `background: ${isWarning ? warningBackground : readyBackground};`;
-
-    // Store button state for multi-step process
-    button.dataset.state = state;
-    button.dataset.missingPage = firstIssue ? firstIssue.page : "";
-    button.dataset.issueReason = firstIssue ? firstIssue.reason : "";
-    button.dataset.weeklyTitle = pageTitle;
-
-    // Initial content
-    const icon = isWarning ? "⚠️" : "📅";
-    const iconStyle = isWarning
-      ? "font-size: 18px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);"
-      : "font-size: 16px;";
-
-    let title, subtitle;
-    if (isWarning && firstIssue) {
-      if (firstIssue.reason === "missing") {
-        title = "Missing monthly page";
-        subtitle = firstIssue.message;
-      } else {
-        title = "Monthly page incomplete";
-        subtitle = firstIssue.message;
-      }
-    } else {
-      title = "Add weekly view?";
-      subtitle = "Embed monthly calendars";
-    }
-
-    button.innerHTML = `
-      <span style="${iconStyle}">${icon}</span>
-      <div>
-        <div style="font-weight: 600;">${title}</div>
-        <div style="font-size: 12px; opacity: 0.9;">${subtitle}</div>
-      </div>
-    `;
-
-    // Add hover effects
-    button.addEventListener("mouseenter", () => {
-      if (isWarning) {
-        button.style.background =
-          "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)";
-      }
-      button.style.transform = "translateY(-2px)";
-      button.style.boxShadow = "0 6px 16px rgba(0,0,0,0.2)";
-    });
-
-    button.addEventListener("mouseleave", () => {
-      button.style.background = isWarning ? warningBackground : readyBackground;
-      button.style.transform = "translateY(0px)";
-      button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-    });
-
-    // Add click handler
-    button.addEventListener("click", () => {
-      console.log(
-        `📅 Button clicked - State: ${button.dataset.state}, Issue: ${button.dataset.issueReason}`
-      );
-
-      // Emit click event for tracking
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:button-click", {
-          state: button.dataset.state,
-          issue: button.dataset.issueReason,
-          pageTitle: pageTitle,
-        });
-      }
-
-      if (button.dataset.state === "warning") {
-        if (button.dataset.issueReason === "missing") {
-          handleCreatePageSimple(button);
-        } else {
-          handleNavigateToIncompletePageSimple(button);
-        }
-      } else if (button.dataset.state === "navigating") {
-        handleNavigateToPageSimple(button);
-      } else if (button.dataset.state === "ready") {
-        console.log("🚀 Creating weekly content!");
-        createWeeklyContent(button);
-      }
-    });
-
-    // Store button reference
-    extensionState.buttonElement = button;
-
-    // Add to page
-    document.body.appendChild(button);
-    console.log(`📅 Weekly button shown - State: ${state}`);
-
-    // Emit UI event
-    if (CalendarSuite?.emit) {
-      CalendarSuite.emit("weekly-view:button-shown", {
-        state: state,
-        pageTitle: pageTitle,
-        hasIssues: pageIssues.length > 0,
-      });
-    }
-  }
-
-  function removeWeeklyButton() {
-    const existingButton = document.getElementById("weekly-view-button");
-    if (existingButton) {
-      existingButton.remove();
-      extensionState.buttonElement = null;
-      console.log("📅 Weekly button removed");
-
-      // Emit UI event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:button-removed", {
-          pageTitle: extensionState.currentPageTitle,
-        });
-      }
-    }
-  }
-
-  // ===================================================================
-  // 🎯 CLICK HANDLERS - Enhanced with Error Reporting
-  // ===================================================================
-
-  async function handleCreatePageSimple(button) {
-    const missingPage = button.dataset.missingPage;
-    console.log(`🏗️ Creating missing page: "${missingPage}"`);
-
-    try {
-      // Update button to show creating state
-      button.dataset.state = "creating";
-      button.style.background =
-        "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">⏳</span>
-        <div>
-          <div style="font-weight: 600;">Creating page...</div>
-          <div style="font-size: 12px; opacity: 0.9;">Please wait</div>
-        </div>
-      `;
-
-      // Emit event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:page-creation-started", {
-          pageTitle: missingPage,
-        });
-      }
-
-      // Create the monthly page using injected Calendar Utilities
-      const roamUtils = extensionState.dependencies.calendarUtilities.RoamUtils;
-      await roamUtils.createPage(missingPage);
-
-      // Wait a moment for creation
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Update button to navigation state
-      button.dataset.state = "navigating";
-      button.style.background =
-        "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">🧭</span>
-        <div>
-          <div style="font-weight: 600;">Page created!</div>
-          <div style="font-size: 12px; opacity: 0.9;">Click to navigate → ${missingPage}</div>
-        </div>
-      `;
-
-      // Emit success event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:page-creation-success", {
-          pageTitle: missingPage,
-        });
-      }
-
-      console.log(`✅ Page "${missingPage}" created successfully`);
-    } catch (error) {
-      console.error(`❌ Error creating page "${missingPage}":`, error);
-
-      // Emit error event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:page-creation-error", {
-          pageTitle: missingPage,
-          error: error,
-        });
-      }
-
-      // Show error state
-      button.style.background =
-        "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">❌</span>
-        <div>
-          <div style="font-weight: 600;">Creation failed</div>
-          <div style="font-size: 12px; opacity: 0.9;">Try manually</div>
-        </div>
-      `;
-
-      // Remove button after error display
-      setTimeout(() => {
-        removeWeeklyButton();
-      }, 3000);
-    }
-  }
-
-  async function handleNavigateToIncompletePageSimple(button) {
-    const incompletePage = button.dataset.missingPage;
-    console.log(`🧭 Navigating to incomplete page: "${incompletePage}"`);
-
-    try {
-      // Navigate using Roam API
-      await window.roamAlphaAPI.ui.mainWindow.openPage({
-        page: { title: incompletePage },
-      });
-
-      // Update button to show navigation success
-      button.style.background =
-        "linear-gradient(135deg, #059669 0%, #047857 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">✅</span>
-        <div>
-          <div style="font-weight: 600;">Navigated!</div>
-          <div style="font-size: 12px; opacity: 0.9;">Complete the monthly page</div>
-        </div>
-      `;
-
-      // Emit event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:navigation-success", {
-          pageTitle: incompletePage,
-        });
-      }
-
-      // Remove button after navigation
-      setTimeout(() => {
-        removeWeeklyButton();
-      }, 2000);
-
-      console.log(`✅ Navigated to "${incompletePage}"`);
-    } catch (error) {
-      console.error(`❌ Error navigating to "${incompletePage}":`, error);
-
-      // Emit error event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:navigation-error", {
-          pageTitle: incompletePage,
-          error: error,
-        });
-      }
-
-      // Show error state
-      button.style.background =
-        "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">❌</span>
-        <div>
-          <div style="font-weight: 600;">Navigation failed</div>
-          <div style="font-size: 12px; opacity: 0.9;">Try manually</div>
-        </div>
-      `;
-
-      // Remove button after error display
-      setTimeout(() => {
-        removeWeeklyButton();
-      }, 3000);
-    }
-  }
-
-  async function handleNavigateToPageSimple(button) {
-    const targetPage = button.dataset.missingPage;
-    console.log(`🧭 Navigating to page: "${targetPage}"`);
-
-    try {
-      // Navigate using Roam API
-      await window.roamAlphaAPI.ui.mainWindow.openPage({
-        page: { title: targetPage },
-      });
-
-      // Update button to show success
-      button.style.background =
-        "linear-gradient(135deg, #059669 0%, #047857 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">✅</span>
-        <div>
-          <div style="font-weight: 600;">Navigated!</div>
-          <div style="font-size: 12px; opacity: 0.9;">Complete the page setup</div>
-        </div>
-      `;
-
-      // Remove button after navigation
-      setTimeout(() => {
-        removeWeeklyButton();
-      }, 2000);
-
-      console.log(`✅ Navigated to "${targetPage}"`);
-    } catch (error) {
-      console.error(`❌ Error navigating to "${targetPage}":`, error);
-
-      // Show error state
-      button.style.background =
-        "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">❌</span>
-        <div>
-          <div style="font-weight: 600;">Navigation failed</div>
-          <div style="font-size: 12px; opacity: 0.9;">Try manually</div>
-        </div>
-      `;
-
-      // Remove button after error display
-      setTimeout(() => {
-        removeWeeklyButton();
-      }, 3000);
-    }
-  }
-
-  // ===================================================================
-  // 🚀 WEEKLY CONTENT CREATION - Enhanced with Events
-  // ===================================================================
-
-  async function createWeeklyContent(button) {
-    const weeklyTitle = button.dataset.weeklyTitle;
-
-    try {
-      // Update button to show creation in progress
-      button.dataset.state = "creating";
-      button.style.background =
-        "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">⚙️</span>
-        <div>
-          <div style="font-weight: 600;">Creating content...</div>
-          <div style="font-size: 12px; opacity: 0.9;">Building weekly view</div>
-        </div>
-      `;
-
-      // Emit creation started event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:content-creation-started", {
-          pageTitle: weeklyTitle,
-        });
-      }
-
-      console.log(`🚀 Creating weekly content for: "${weeklyTitle}"`);
-
-      // Get the page UID
-      const pageUid = window.roamAlphaAPI.data.q(`
-        [:find ?uid .
-         :where 
-         [?e :node/title "${weeklyTitle}"]
-         [?e :block/uid ?uid]]
-      `);
-
-      if (!pageUid) {
-        throw new Error(`Could not find page UID for "${weeklyTitle}"`);
-      }
-
-      // Load config for enabled features
-      const config = getExtensionConfig();
-      let order = 0;
-
-      // 1. Add week count within the year (if enabled)
-      if (config.settings["add week count within the year"] === "yes") {
-        await addWeekCountInYearLine(pageUid, order, weeklyTitle);
-        order++;
-      }
-
-      // 2. Add morning intentions query (if enabled)
-      if (
-        config.settings["include query for `[[Morning Intentions]]`"] === "yes"
-      ) {
-        await addMorningIntentionsQuery(pageUid, order, weeklyTitle);
-        order++;
-      }
-
-      // Add divider before embeds
-      await window.roamAlphaAPI.data.block.create({
-        location: { "parent-uid": pageUid, order: order },
-        block: { string: "---" },
-      });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      order++;
-
-      // Find week blocks from monthly pages
-      const weekEmbeds = await findWeekBlocksForWeekly(weeklyTitle);
-
-      if (weekEmbeds.length === 0) {
-        throw new Error("No week blocks found in monthly pages");
-      }
-
-      // Add embeds in order
-      for (const embed of weekEmbeds) {
-        await window.roamAlphaAPI.data.block.create({
-          location: { "parent-uid": pageUid, order: order },
-          block: { string: `{{embed-path: ((${embed.uid}))}}` },
-        });
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        order++;
-
-        console.log(
-          `✅ Added embed for ${embed.monthPage}: {{embed-path: ((${embed.uid}))}}`
-        );
-      }
-
-      // Add divider after embeds
-      await window.roamAlphaAPI.data.block.create({
-        location: { "parent-uid": pageUid, order: order },
-        block: { string: "---" },
-      });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      order++;
-
-      // 3. Add evening reflections query (if enabled) - AFTER EMBEDS
-      if (
-        config.settings["add query for `[[Evening Reflections]]`"] === "yes"
-      ) {
-        await addEveningReflectionsQuery(pageUid, order, weeklyTitle);
-        order++;
-      }
-
-      // 4. Add Plus-Minus-Next journal (if enabled) - LAST
-      if (config.settings["add Plus-Minus-Next journal"] === "yes") {
-        await addPlusMinusNextJournal(pageUid, order, weeklyTitle);
-        order++;
-      }
-
-      // Update button to show success
-      button.style.background =
-        "linear-gradient(135deg, #059669 0%, #047857 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">✅</span>
-        <div>
-          <div style="font-weight: 600;">Content created!</div>
-          <div style="font-size: 12px; opacity: 0.9;">Weekly view is ready</div>
-        </div>
-      `;
-
-      // Emit success event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:content-creation-success", {
-          pageTitle: weeklyTitle,
-          features: {
-            weekCount:
-              config.settings["add week count within the year"] === "yes",
-            morningIntentions:
-              config.settings["include query for `[[Morning Intentions]]`"] ===
-              "yes",
-            eveningReflections:
-              config.settings["add query for `[[Evening Reflections]]`"] ===
-              "yes",
-            plusMinusNext:
-              config.settings["add Plus-Minus-Next journal"] === "yes",
-            embedCount: weekEmbeds.length,
-          },
-        });
-      }
-
-      // Remove button after success
-      setTimeout(() => {
-        removeWeeklyButton();
-        console.log(`🚀 Weekly content creation complete!`);
-      }, 2000);
-    } catch (error) {
-      console.error("❌ Error creating weekly content:", error);
-
-      // Emit error event
-      if (CalendarSuite?.emit) {
-        CalendarSuite.emit("weekly-view:content-creation-error", {
-          pageTitle: weeklyTitle,
-          error: error,
-        });
-      }
-
-      // Show error state
-      button.style.background =
-        "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)";
-      button.innerHTML = `
-        <span style="font-size: 16px;">❌</span>
-        <div>
-          <div style="font-weight: 600;">Creation failed</div>
-          <div style="font-size: 12px; opacity: 0.9;">${error.message}</div>
-        </div>
-      `;
-
-      // Remove button after error display
-      setTimeout(() => {
-        removeWeeklyButton();
-      }, 4000);
     }
   }
 
@@ -1331,20 +893,21 @@
   }
 
   // ===================================================================
-  // 🧹 CLEANUP FUNCTIONS - Enhanced for Central System
+  // 🧹 CLEANUP FUNCTIONS
   // ===================================================================
 
   function cleanup() {
-    console.log("🧹 Weekly View Extension v4.0 cleanup...");
+    console.log("🧹 Weekly View Extension v5.0 cleanup...");
 
-    // Remove any existing button
-    removeWeeklyButton();
+    // Cleanup button manager
+    if (extensionState.buttonManager) {
+      extensionState.buttonManager.cleanup();
+    }
 
     // Clear extension state
     extensionState = {
       initialized: false,
-      currentPageTitle: null,
-      buttonElement: null,
+      buttonManager: null,
       config: null,
       dependencies: null,
     };
@@ -1356,64 +919,52 @@
       });
     }
 
-    console.log("✅ Weekly View Extension v4.0 cleanup complete");
+    console.log("✅ Weekly View Extension v5.0 cleanup complete");
   }
 
   // ===================================================================
-  // 🚀 EXTENSION EXPORT - Modernized Calendar Foundation Integration
+  // 🚀 EXTENSION EXPORT - Button Manager Integration
   // ===================================================================
 
   const WeeklyViewExtension = {
     onload: async ({ extensionAPI }) => {
       console.log(
-        "📅 Weekly View Extension v4.0 loading (Modernized Architecture)..."
+        "📅 Weekly View Extension v5.0 loading (Button Manager Integration)..."
       );
 
-      // 🔒 DEPENDENCY CHECK - Calendar Foundation v2.0+ required
-      if (!window.CalendarSuite) {
-        console.error(
-          "❌ Weekly View Extension requires Calendar Foundation v2.0+ - please install first!"
-        );
-        alert(
-          "❌ Weekly View Extension requires Calendar Foundation v2.0+.\n\nPlease install Calendar Foundation v2.0+ first, then reload."
-        );
-        return;
-      }
-
-      // 🔒 DEPENDENCY CHECK - Central Page Detection required
-      if (!window.CalendarSuite.pageDetector) {
-        console.error("❌ Central Page Detection System not available!");
-        alert(
-          "❌ Central Page Detection System not available.\n\nPlease ensure Calendar Foundation v2.0+ loaded properly."
-        );
-        return;
-      }
-
-      console.log("🔧 Dependencies satisfied, proceeding with modern setup...");
-
       try {
-        // 🎯 REGISTER WITH CALENDAR FOUNDATION (Utility Registration)
-        CalendarSuite.register(
-          EXTENSION_CONFIG.id,
-          {
-            handleWeeklyPageDetected,
-            handlePageChangeAway,
-            createWeeklyContent,
-            getExtensionConfig,
-            version: EXTENSION_CONFIG.version,
-          },
-          {
-            name: EXTENSION_CONFIG.name,
-            description: EXTENSION_CONFIG.description,
-            version: EXTENSION_CONFIG.version,
-            dependencies: EXTENSION_CONFIG.dependencies,
-            provides: EXTENSION_CONFIG.provides,
-          }
+        // 🔒 DEPENDENCY CHECK - Simple Button Manager required
+        if (!window.SimpleExtensionButtonManager) {
+          console.error(
+            "❌ Weekly View Extension requires Simple Button Manager v3.2+ - please install first!"
+          );
+          alert(
+            "❌ Weekly View Extension requires Simple Button Manager v3.2+.\n\nPlease install Simple Button Manager first, then reload."
+          );
+          return;
+        }
+
+        // 🔒 DEPENDENCY CHECK - Calendar Foundation v2.0+ required
+        if (!window.CalendarSuite) {
+          console.error(
+            "❌ Weekly View Extension requires Calendar Foundation v2.0+ - please install first!"
+          );
+          alert(
+            "❌ Weekly View Extension requires Calendar Foundation v2.0+.\n\nPlease install Calendar Foundation v2.0+ first, then reload."
+          );
+          return;
+        }
+
+        console.log("🔧 Dependencies satisfied, proceeding with setup...");
+
+        // 🎯 INITIALIZE BUTTON MANAGER
+        extensionState.buttonManager = new window.SimpleExtensionButtonManager(
+          "WeeklyView"
         );
+        await extensionState.buttonManager.initialize();
+        console.log("✅ Button manager initialized");
 
-        console.log("✅ Extension registered with Calendar Foundation");
-
-        // 🔌 SETUP DEPENDENCIES MANUALLY (until dependency injection available)
+        // 🔌 SETUP DEPENDENCIES
         extensionState.dependencies = {
           calendarUtilities: window.CalendarUtilities,
           unifiedConfigUtils: window.UnifiedConfigUtils,
@@ -1436,53 +987,62 @@
         await initializeConfig();
         console.log("✅ Config system initialized");
 
-        // 🎯 REGISTER PAGE DETECTION LISTENERS (Using actual API)
-        const weeklyUnregister =
-          CalendarSuite.pageDetector.registerPageListener(
-            "weekly-page-listener",
-            (pageTitle) =>
-              CalendarUtilities.WeeklyUtils.isWeeklyPage(pageTitle),
-            handleWeeklyPageDetected
-          );
+        // 🚀 REGISTER WEEKLY VIEW BUTTON with Calendar Suite styling
+        await extensionState.buttonManager.registerButton({
+          id: "create-weekly-view",
+          text: "📅 Create Weekly View",
+          onClick: async () => {
+            console.log("📅 Weekly View button clicked!");
 
-        // Store unregister function for cleanup
-        extensionState.weeklyUnregister = weeklyUnregister;
+            // Get current page title (should be a weekly page due to condition)
+            const currentPageTitle =
+              extensionState.dependencies.calendarUtilities.WeeklyUtils.getCurrentPageTitle?.() ||
+              document.querySelector(".roam-article h1")?.textContent?.trim();
 
-        console.log("✅ Page detection listeners registered");
+            if (!currentPageTitle) {
+              alert("❌ Could not determine current page title");
+              return;
+            }
 
-        // 📊 REGISTER EVENT LISTENERS (Using actual API)
-        // Note: Calendar Foundation v2.0 has emit() but event listening may be different
-        // For now, we'll use the emit functionality for reporting events
+            // Verify it's actually a weekly page
+            if (
+              !extensionState.dependencies.calendarUtilities.WeeklyUtils.isWeeklyPage(
+                currentPageTitle
+              )
+            ) {
+              alert("❌ This doesn't appear to be a weekly page");
+              return;
+            }
 
-        console.log("✅ Event system ready");
+            // Create weekly content
+            await createWeeklyContent(currentPageTitle);
+          },
+          showOn: ["isWeeklyPage"], // Only show on weekly pages
+          stack: "top-right",
+          style: calendarButtonStyle, // Apply Calendar Suite styling
+        });
 
-        // 🔍 TRIGGER INITIAL PAGE CHECK
-        const currentPageTitle =
-          CalendarSuite.pageDetector.getCurrentPageTitle();
-        if (
-          currentPageTitle &&
-          EXTENSION_CONFIG.pagePatterns.weekly.detect(currentPageTitle)
-        ) {
-          console.log("🎯 Initial weekly page detected, triggering handler");
-          await handleWeeklyPageDetected(currentPageTitle, { initial: true });
-        }
+        console.log(
+          "✅ Weekly View button registered with Calendar Suite styling"
+        );
 
         // Mark as initialized
         extensionState.initialized = true;
 
-        console.log("✅ Weekly View Extension v4.0 loaded successfully!");
+        console.log("✅ Weekly View Extension v5.0 loaded successfully!");
         console.log(
-          "🚀 Modernized: Central page detection • Event-driven • Dependency injection"
-        );
-        console.log(
-          `📋 Config managed via: [[${extensionState.dependencies.unifiedConfigUtils.CONFIG_PAGE_TITLE}]]`
+          "🚀 Simplified: Single-step workflow • Button Manager integration • Calendar Suite styling"
         );
 
         // 🎯 EMIT LOAD SUCCESS EVENT
         if (CalendarSuite?.emit) {
           CalendarSuite.emit("weekly-view:loaded", {
             version: EXTENSION_CONFIG.version,
-            features: EXTENSION_CONFIG.provides,
+            features: [
+              "simplified-workflow",
+              "button-manager-integration",
+              "calendar-suite-styling",
+            ],
             timestamp: new Date().toISOString(),
           });
         }
@@ -1505,7 +1065,7 @@
     },
 
     onunload: () => {
-      console.log("👋 Weekly View Extension v4.0 unloading...");
+      console.log("👋 Weekly View Extension v5.0 unloading...");
 
       try {
         // 🎯 EMIT UNLOAD EVENT
@@ -1515,16 +1075,10 @@
           });
         }
 
-        // 🎯 UNREGISTER PAGE LISTENERS
-        if (extensionState.weeklyUnregister) {
-          extensionState.weeklyUnregister();
-          console.log("✅ Page detection listeners unregistered");
-        }
-
         // 🧹 CLEANUP
         cleanup();
 
-        console.log("✅ Weekly View Extension v4.0 unloaded successfully!");
+        console.log("✅ Weekly View Extension v5.0 unloaded successfully!");
       } catch (error) {
         console.error("❌ Error during Weekly View Extension unload:", error);
       }
