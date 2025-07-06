@@ -27,14 +27,6 @@ const CALENDAR_EXTENSIONS = [
     exportPattern: "standard",
   },
   {
-    id: "buttons",
-    name: "Buttons Manager",
-    url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/1.6-buttons-manager/extension.js",
-    description: "Button management utilities",
-    critical: true,
-    exportPattern: "standard",
-  },
-  {
     id: "monthly",
     name: "Monthly View",
     url: "https://raw.githubusercontent.com/mjbrockwell/Calendar-Suite/refs/heads/main/2.0-monthly-view/extension.js",
