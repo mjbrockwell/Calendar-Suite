@@ -1,27 +1,26 @@
 // ===================================================================
-// 🎯 ROAM CALENDAR SUITE - USER SETUP MODAL EXTENSION v2.1
+// 🎯 ROAM CALENDAR SUITE - USER SETUP MODAL EXTENSION v2.0
 // ===================================================================
 // Extension 5: Event Type Configuration Modal
 //
 // 🌟 THE CROWN JEWEL - Complete user customization interface!
-// ✨ NOW WITH: Simple Button Manager v3.1 Integration
 //
 // ✨ BUILT ON MODERN INFRASTRUCTURE:
 // - 🎯 Calendar Foundation v2.0 (Central page detection + auto cleanup)
 // - 🔧 Calendar Utilities v1.2 (Professional Roam operations)
 // - 📋 UnifiedConfigUtils (Tag configuration management)
-// - 🎨 Simple Button Extension Manager v3.1 (Professional button styling)
 //
 // Features:
 // - 🎨 Beautiful modal for editing all 10 event types (#yv0 - #yv9)
 // - 🖱️ Click-to-edit names, colors, and emojis
 // - 💾 Save changes directly to config page
-// - 🎯 Professional compound button with Calendar Suite styling
+// - 📍 Smart positioning (upper left, non-intrusive)
+// - 🎯 Zero-polling page detection via Calendar Foundation
 // - 🧹 Automatic resource cleanup
 // ===================================================================
 
 console.log(
-  "🎨 Loading User Setup Modal Extension v2.1 (Simple Button Manager Integration)..."
+  "🎨 Loading User Setup Modal Extension v2.0 (Modern Infrastructure)..."
 );
 
 // ===================================================================
@@ -33,18 +32,11 @@ console.log(
  */
 function checkRequiredDependencies() {
   const missing = [];
-  const warnings = [];
 
-  // Required dependencies
   if (!window.CalendarSuite) missing.push("Calendar Foundation v2.0");
   if (!window.CalendarUtilities) missing.push("Calendar Utilities v1.2");
   if (!window.UnifiedConfigUtils) missing.push("UnifiedConfigUtils");
   if (!window.roamAlphaAPI) missing.push("Roam Alpha API");
-
-  // Optional but recommended dependencies
-  if (!window.SimpleExtensionButtonManager) {
-    warnings.push("Simple Button Extension Manager v3.1 (will use fallback)");
-  }
 
   if (missing.length > 0) {
     const error = `❌ Missing required dependencies: ${missing.join(", ")}`;
@@ -52,22 +44,12 @@ function checkRequiredDependencies() {
     throw new Error(error);
   }
 
-  if (warnings.length > 0) {
-    console.warn(`⚠️ Optional dependencies missing: ${warnings.join(", ")}`);
-  }
-
   // Check specific components
   if (!window.CalendarSuite.pageDetector) {
     throw new Error("❌ Calendar Foundation page detector not available");
   }
 
-  console.log("✅ All required dependencies verified");
-  if (warnings.length === 0) {
-    console.log(
-      "✅ All optional dependencies available - using Simple Button Manager"
-    );
-  }
-
+  console.log("✅ All dependencies verified");
   return true;
 }
 
@@ -447,6 +429,12 @@ function createSetupModal(tagConfigs) {
   buttonContainer.appendChild(cancelButton);
   buttonContainer.appendChild(saveButton);
 
+  // Assemble modal
+  modalContent.appendChild(header);
+  modalContent.appendChild(table);
+  modalContent.appendChild(buttonContainer);
+  modal.appendChild(modalContent);
+
   // Event handlers
   cancelButton.addEventListener("click", () => {
     modal.remove();
@@ -538,173 +526,171 @@ function createSetupModal(tagConfigs) {
     }
   });
 
-  // Assemble modal
-  modalContent.appendChild(header);
-  modalContent.appendChild(table);
-  modalContent.appendChild(buttonContainer);
-  modal.appendChild(modalContent);
-
   return modal;
 }
 
 // ===================================================================
-// 🎯 SIMPLE BUTTON MANAGER INTEGRATION
+// 🎯 FLOATING BUTTON MANAGEMENT
 // ===================================================================
 
-// 🎯 CALENDAR SUITE STYLING: Pale sky blue with deep navy accents
-const calendarButtonStyle = {
-  background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)", // Pale sky blue gradient
-  border: "1.5px solid #1e3a8a", // Deep navy border
-  color: "#1e3a8a", // Deep navy text
-  fontWeight: "600",
-  padding: "10px 16px",
-  borderRadius: "12px",
-  boxShadow: "0 4px 12px rgba(59, 130, 246, 0.2)", // Soft blue shadow
-};
-
 /**
- * Extract the modal opening logic into its own function
+ * Create the floating setup button with dismiss functionality
  */
-async function openConfigurationModal() {
-  try {
-    console.log("🎨 Opening event type configuration modal...");
-    const tagConfigs = await loadTagConfigurations();
-    const modal = createSetupModal(tagConfigs);
-    document.body.appendChild(modal);
-
-    // Register modal for cleanup
-    dispatchToRegistry({ elements: [modal] });
-  } catch (error) {
-    console.error("❌ Error opening setup modal:", error);
-    alert(
-      "❌ Error loading event type configurations. Please check console for details."
-    );
+function createFloatingButton() {
+  // Remove existing button if present
+  const existingButton = document.getElementById("calendar-setup-button");
+  if (existingButton) {
+    existingButton.remove();
   }
-}
 
-/**
- * Setup Simple Button Manager integration
- */
-async function setupSimpleButtonIntegration() {
-  try {
-    console.log("🎨 Initializing Simple Button Manager integration...");
+  // Create button container
+  const buttonContainer = document.createElement("div");
+  buttonContainer.id = "calendar-setup-button";
+  buttonContainer.title = "Click here to see or edit event types";
 
-    // Initialize Simple Button Manager
-    const buttonManager = new window.SimpleExtensionButtonManager(
-      "EventTypeConfig"
-    );
-    await buttonManager.initialize();
+  // Create main button
+  const button = document.createElement("button");
+  button.style.cssText = `
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+  `;
 
-    // Register the event types compound button with Calendar Suite styling
-    const buttonResult = await buttonManager.registerButton({
-      id: "event-types-config",
+  // Create emoji and text separately to ensure proper spacing
+  const emoji = document.createElement("span");
+  emoji.textContent = "🎨";
+  const text = document.createElement("span");
+  text.textContent = "Event Types";
 
-      // Compound button with professional appearance
-      sections: [
-        {
-          type: "icon",
-          content: "🎨",
-          tooltip: "Event Type Configuration",
-          style: {
-            ...calendarButtonStyle,
-            borderRight: "1px solid #1e3a8a",
-            borderTopRightRadius: "0",
-            borderBottomRightRadius: "0",
-            minWidth: "40px",
-          },
-          onClick: async () => {
-            await openConfigurationModal();
-          },
-        },
-        {
-          type: "main",
-          content: "Event Types",
-          tooltip: "Configure all 10 event types (#yv0 - #yv9)",
-          style: {
-            ...calendarButtonStyle,
-            border: "1.5px solid #1e3a8a",
-            borderLeft: "none",
-            borderTopLeftRadius: "0",
-            borderBottomLeftRadius: "0",
-            flex: "1",
-          },
-          onClick: async () => {
-            await openConfigurationModal();
-          },
-        },
-      ],
+  button.appendChild(emoji);
+  button.appendChild(text);
 
-      // Show on monthly pages and config page
-      showOn: ["isMonthlyPage", "isConfigPage"],
+  // Create dismiss button
+  const dismissButton = document.createElement("button");
+  dismissButton.innerHTML = "×";
+  dismissButton.title = "Dismiss";
+  dismissButton.style.cssText = `
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    transition: background 0.2s ease;
+  `;
 
-      // Position in top-left stack
-      stack: "top-left",
+  // Dismiss button hover
+  dismissButton.addEventListener("mouseenter", () => {
+    dismissButton.style.background = "rgba(255, 255, 255, 0.3)";
+  });
+  dismissButton.addEventListener("mouseleave", () => {
+    dismissButton.style.background = "rgba(255, 255, 255, 0.2)";
+  });
 
-      // High priority to appear first
-      priority: true,
-    });
+  // Dismiss functionality
+  dismissButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    buttonContainer.remove();
+  });
 
-    if (buttonResult.success) {
-      console.log(
-        "✅ Event Types compound button registered with Simple Button Manager"
+  // Assemble button
+  buttonContainer.appendChild(button);
+  buttonContainer.appendChild(dismissButton);
+
+  // Position relative to main content area, not viewport
+  buttonContainer.style.cssText = `
+    position: absolute;
+    top: 10px;
+    left: 20px;
+    background: #5c7cfa;
+    color: white;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: system-ui, -apple-system, sans-serif;
+    z-index: 9999;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: auto;
+    line-height: 1.4;
+  `;
+
+  // Main button and container hover effects (applied to container)
+  buttonContainer.addEventListener("mouseenter", () => {
+    buttonContainer.style.background = "#4c6ef5";
+    buttonContainer.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.3)";
+  });
+
+  buttonContainer.addEventListener("mouseleave", () => {
+    buttonContainer.style.background = "#5c7cfa";
+    buttonContainer.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.2)";
+  });
+
+  // Click handler for main button
+  button.addEventListener("click", async () => {
+    const originalContent = button.innerHTML;
+    button.innerHTML = "🎨 Loading...";
+
+    try {
+      const tagConfigs = await loadTagConfigurations();
+      const modal = createSetupModal(tagConfigs);
+      document.body.appendChild(modal);
+
+      // Register modal for cleanup
+      dispatchToRegistry({ elements: [modal] });
+    } catch (error) {
+      console.error("❌ Error opening setup modal:", error);
+      alert(
+        "❌ Error loading event type configurations. Please check console for details."
       );
-
-      // Register button manager for cleanup with existing registry system
-      dispatchToRegistry({
-        customCleanups: [
-          () => {
-            console.log("🧹 Cleaning up Simple Button Manager integration");
-            buttonManager.cleanup();
-          },
-        ],
-      });
-
-      return true;
-    } else {
-      throw new Error("Failed to register button with Simple Button Manager");
     }
-  } catch (error) {
-    console.error(
-      "❌ Error setting up Simple Button Manager integration:",
-      error
-    );
 
-    // Fallback to original floating button if Simple Button Manager fails
-    console.log("🔄 Falling back to original floating button system");
-    return setupFallbackButton();
-  }
+    // Reset button content
+    button.innerHTML = "";
+    const newEmoji = document.createElement("span");
+    newEmoji.textContent = "🎨";
+    const newText = document.createElement("span");
+    newText.textContent = "Event Types";
+    button.appendChild(newEmoji);
+    button.appendChild(newText);
+  });
+
+  return buttonContainer;
 }
 
-/**
- * Setup custom page conditions for Simple Button Manager
- */
-function setupCustomPageConditions() {
-  // Extend ButtonConditions if needed for config page detection
-  if (window.ButtonConditions) {
-    // Add custom config page condition
-    window.ButtonConditions.isConfigPage = () => {
-      const pageTitle = window.getCurrentPageTitle?.() || document.title;
-      return pageTitle === "roam/ext/calendar suite/config";
-    };
-
-    console.log(
-      "✅ Custom page conditions registered for Simple Button Manager"
-    );
-  }
-}
+// ===================================================================
+// 🎯 CALENDAR FOUNDATION INTEGRATION
+// ===================================================================
 
 /**
- * Fallback button system (original floating button for compatibility)
+ * Setup central page detection using Calendar Foundation
  */
-function setupFallbackButton() {
-  console.log("⚠️ Using fallback floating button system");
-
+function setupCentralPageDetection() {
   let currentButton = null;
 
   // Function to show button on correct pages
   const showButton = () => {
     if (!currentButton) {
-      currentButton = createFallbackFloatingButton();
+      currentButton = createFloatingButton();
 
       // Find main content area to anchor the button properly
       const mainContent =
@@ -743,14 +729,13 @@ function setupFallbackButton() {
     window.CalendarSuite.pageDetector.registerPageListener(
       "month-page",
       (pageTitle) => {
+        // Match month pages (e.g., "January 2025", "December 2024")
         const monthPattern =
           /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$/;
         return monthPattern.test(pageTitle);
       },
       () => {
-        console.log(
-          "🎨 Month page detected - showing event types button (fallback)"
-        );
+        console.log("🎨 Month page detected - showing event types button");
         showButton();
       }
     );
@@ -763,9 +748,7 @@ function setupFallbackButton() {
         return pageTitle === "roam/ext/calendar suite/config";
       },
       () => {
-        console.log(
-          "🎨 Config page detected - showing event types button (fallback)"
-        );
+        console.log("🎨 Config page detected - showing event types button");
         showButton();
       }
     );
@@ -775,6 +758,7 @@ function setupFallbackButton() {
     window.CalendarSuite.pageDetector.registerPageListener(
       "other-pages",
       (pageTitle) => {
+        // Match any page that's NOT a month page or config page
         const monthPattern =
           /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$/;
         const isMonthPage = monthPattern.test(pageTitle);
@@ -784,7 +768,7 @@ function setupFallbackButton() {
       },
       () => {
         console.log(
-          "🎨 Non-calendar page detected - hiding event types button (fallback)"
+          "🎨 Non-calendar page detected - hiding event types button"
         );
         hideButton();
       }
@@ -802,131 +786,11 @@ function setupFallbackButton() {
     ],
   });
 
+  console.log(
+    "✅ Central page detection setup complete with proper show/hide logic"
+  );
   return true;
 }
-
-/**
- * Create fallback floating button with Calendar Suite styling
- */
-function createFallbackFloatingButton() {
-  // Create button container
-  const buttonContainer = document.createElement("div");
-  buttonContainer.id = "calendar-setup-button";
-  buttonContainer.title = "Click here to configure event types";
-
-  // Create compound-style button with Calendar Suite styling
-  const iconSection = document.createElement("div");
-  iconSection.style.cssText = `
-    ${Object.entries(calendarButtonStyle)
-      .map(
-        ([key, value]) =>
-          `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value}`
-      )
-      .join("; ")};
-    border-right: 1px solid #1e3a8a;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    padding: 10px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 200ms ease;
-    font-size: 16px;
-  `;
-  iconSection.textContent = "🎨";
-
-  const textSection = document.createElement("div");
-  textSection.style.cssText = `
-    ${Object.entries(calendarButtonStyle)
-      .map(
-        ([key, value]) =>
-          `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value}`
-      )
-      .join("; ")};
-    border-left: none;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 200ms ease;
-    font-family: system-ui, -apple-system, sans-serif;
-  `;
-  textSection.textContent = "Event Types";
-
-  // Container styling
-  buttonContainer.style.cssText = `
-    position: absolute;
-    top: 10px;
-    left: 20px;
-    display: flex;
-    align-items: center;
-    z-index: 9999;
-    transition: all 0.2s ease;
-  `;
-
-  // Hover effects
-  const addHoverEffect = (element) => {
-    element.addEventListener("mouseenter", () => {
-      element.style.transform = "translateY(-1px)";
-      element.style.opacity = "0.9";
-    });
-    element.addEventListener("mouseleave", () => {
-      element.style.transform = "translateY(0)";
-      element.style.opacity = "1";
-    });
-  };
-
-  addHoverEffect(iconSection);
-  addHoverEffect(textSection);
-
-  // Click handlers
-  const clickHandler = async () => {
-    await openConfigurationModal();
-  };
-
-  iconSection.addEventListener("click", clickHandler);
-  textSection.addEventListener("click", clickHandler);
-
-  // Assemble button
-  buttonContainer.appendChild(iconSection);
-  buttonContainer.appendChild(textSection);
-
-  return buttonContainer;
-}
-
-/**
- * Setup central page detection using Simple Button Manager or fallback
- */
-function setupCentralPageDetection() {
-  console.log("🎯 Setting up button display system...");
-
-  // Setup custom page conditions first
-  setupCustomPageConditions();
-
-  // Try Simple Button Manager integration, fallback if needed
-  if (window.SimpleExtensionButtonManager) {
-    console.log(
-      "✅ Simple Button Manager available - using professional compound button"
-    );
-    setupSimpleButtonIntegration();
-  } else {
-    console.log(
-      "⚠️ Simple Button Manager not available - using fallback button"
-    );
-    setupFallbackButton();
-  }
-
-  console.log("✅ Button display system setup complete");
-  return true;
-}
-
-// ===================================================================
-// 🎯 COMMAND PALETTE INTEGRATION
-// ===================================================================
 
 /**
  * Setup command palette commands
@@ -936,7 +800,19 @@ function setupCommandPalette() {
     {
       label: "🎨 Event Types: Open Configuration Modal",
       callback: async () => {
-        await openConfigurationModal();
+        try {
+          const tagConfigs = await loadTagConfigurations();
+          const modal = createSetupModal(tagConfigs);
+          document.body.appendChild(modal);
+
+          // Register modal for cleanup
+          dispatchToRegistry({ elements: [modal] });
+        } catch (error) {
+          console.error("❌ Error opening configuration modal:", error);
+          alert(
+            "❌ Error loading event type configurations. Please check console for details."
+          );
+        }
       },
     },
     {
@@ -947,7 +823,7 @@ function setupCommandPalette() {
 
           let configText = "🎨 Current Event Type Configuration:\n\n";
           Object.entries(tagConfigs).forEach(([tagId, config]) => {
-            configText += `#${tagId}: ${config.emoji} ${config.name} (Text: ${config.textColor}, Background: ${config.backgroundColor})\n`;
+            configText += `#${tagId}: ${config.emoji} ${config.name} (${config.color})\n`;
           });
 
           alert(configText);
@@ -974,10 +850,6 @@ function setupCommandPalette() {
   console.log(`✅ Added ${commands.length} command palette commands`);
   return commands;
 }
-
-// ===================================================================
-// 🧹 RESOURCE CLEANUP MANAGEMENT
-// ===================================================================
 
 /**
  * Helper function for resource registration (using Calendar Foundation registry)
@@ -1043,38 +915,31 @@ function dispatchToRegistry(resources) {
 
 const extension = {
   onload: ({ extensionAPI }) => {
-    console.group(
-      "🎨 User Setup Modal Extension v2.1 - Simple Button Manager Integration"
-    );
-    console.log("🚀 Loading crown jewel with professional button styling...");
+    console.group("🎨 User Setup Modal Extension v2.0 - Modern Infrastructure");
+    console.log("🚀 Loading crown jewel with professional architecture...");
 
     try {
-      // Step 1: Verify all dependencies (including Simple Button Manager)
+      // Step 1: Verify all dependencies
       checkRequiredDependencies();
 
-      // Step 2: Setup central page detection (now uses Simple Button Manager when available)
+      // Step 2: Setup central page detection
       setupCentralPageDetection();
 
-      // Step 3: Setup command palette (unchanged)
+      // Step 3: Setup command palette
       setupCommandPalette();
 
       console.log("");
-      console.log("🎉 User Setup Modal Extension v2.1 loaded successfully!");
+      console.log("🎉 User Setup Modal Extension v2.0 loaded successfully!");
       console.log("🎯 Features:");
-      console.log("  - ✨ NEW: Simple Button Manager v3.1 integration");
-      console.log(
-        "  - 🎨 NEW: Calendar Suite styling (pale sky blue with deep navy)"
-      );
-      console.log("  - 🔧 NEW: Professional compound button design");
-      console.log("  - 🎯 Zero-polling page detection via Calendar Foundation");
-      console.log("  - 🧹 Automatic resource cleanup");
-      console.log("  - 🎨 Beautiful modal interface for tag customization");
-      console.log("  - 📍 Smart fallback for compatibility");
+      console.log("  - Zero-polling page detection via Calendar Foundation");
+      console.log("  - Automatic resource cleanup");
+      console.log("  - Beautiful modal interface for tag customization");
+      console.log("  - Professional integration with existing infrastructure");
       console.log("");
       console.log("📍 Usage:");
       console.log("  - Navigate to any month page (e.g., 'January 2025')");
       console.log("  - Navigate to 'roam/ext/calendar suite/config'");
-      console.log("  - Click the '🎨 Event Types' compound button in top-left");
+      console.log("  - Click the '🎨 Event Types' button in upper left");
       console.log(
         "  - Or use Command Palette: '🎨 Event Types: Open Configuration Modal'"
       );
@@ -1089,13 +954,13 @@ const extension = {
   },
 
   onunload: () => {
-    console.log("🎨 User Setup Modal Extension v2.1 unloading...");
+    console.log("🎨 User Setup Modal Extension v2.0 unloading...");
 
     // Calendar Foundation will handle all cleanup automatically via registry
-    // Simple Button Manager cleanup is also registered in the registry
+    // No manual cleanup needed!
 
     console.log(
-      "✅ User Setup Modal Extension v2.1 unloaded (auto-cleanup complete)"
+      "✅ User Setup Modal Extension v2.0 unloaded (auto-cleanup complete)"
     );
   },
 };
