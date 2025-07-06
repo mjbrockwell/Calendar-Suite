@@ -610,6 +610,7 @@ async function setupSimpleButtonIntegration() {
             borderRight: "1px solid #1e3a8a",
             borderTopRightRadius: "0",
             borderBottomRightRadius: "0",
+            padding: "8px 12px",
             minWidth: "40px",
           },
           onClick: async () => {
@@ -626,6 +627,9 @@ async function setupSimpleButtonIntegration() {
             borderLeft: "none",
             borderTopLeftRadius: "0",
             borderBottomLeftRadius: "0",
+            borderTopRightRadius: "0",
+            borderBottomRightRadius: "0",
+            padding: "8px 16px",
             flex: "1",
           },
           onClick: async () => {
@@ -826,7 +830,7 @@ function createFallbackFloatingButton() {
     border-right: 1px solid #1e3a8a;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
-    padding: 10px 12px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -847,7 +851,9 @@ function createFallbackFloatingButton() {
     border-left: none;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    padding: 10px 16px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
     justify-content: center;
