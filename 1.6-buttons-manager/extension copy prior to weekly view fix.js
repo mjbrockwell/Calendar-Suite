@@ -1,7 +1,7 @@
 // ===================================================================
-// Simple Button Utility Extension 3.2.0 - Weekly Page Support Added
-// 🆕 NEW: Weekly page detection conditions for Calendar Suite
-// 📅 ADDED: isWeeklyPage condition using CalendarUtilities
+// Simple Button Utility Extension 3.1.1 - Perfect Border Radius Fix
+// 🎨 FIXED: Compound buttons now have perfect rounded corners
+// 🆕 NEW: Monthly page detection conditions for Calendar Suite
 // ✅ GUARANTEED: 100% backward compatibility with existing extensions
 // 🔧 ENHANCED: Professional multi-section button architecture
 // ===================================================================
@@ -10,7 +10,7 @@
   "use strict";
 
   const EXTENSION_NAME = "Simple Button Utility";
-  const EXTENSION_VERSION = "3.2.0"; // 📅 NEW: Weekly page support
+  const EXTENSION_VERSION = "3.1.1"; // 🎨 FIXED: Perfect border-radius for compound buttons
   const ANIMATION_DURATION = 200;
 
   // ==================== SECTION TYPE DEFINITIONS ====================
@@ -191,7 +191,7 @@
     }
   }
 
-  // ==================== BUTTON CONDITIONS (Enhanced with Weekly Page Support) ====================
+  // ==================== BUTTON CONDITIONS (Enhanced with Monthly Page Support) ====================
 
   const ButtonConditions = {
     isUsernamePage: () => {
@@ -336,38 +336,6 @@
       }
     },
 
-    // 🆕 NEW: Weekly page detection for Calendar Suite
-    isWeeklyPage: () => {
-      const pageTitle = getCurrentPageTitle();
-      if (!pageTitle) return false;
-
-      // Use Calendar Utilities if available for accurate detection
-      if (window.CalendarUtilities?.WeeklyUtils?.isWeeklyPage) {
-        const isWeekly =
-          window.CalendarUtilities.WeeklyUtils.isWeeklyPage(pageTitle);
-
-        if (window.SimpleButtonRegistry?.debugMode) {
-          console.log(
-            `📅 Weekly page detection (CalendarUtilities) for "${pageTitle}": ${isWeekly}`
-          );
-        }
-
-        return isWeekly;
-      }
-
-      // Fallback regex for weekly pattern: "MM/DD YYYY - MM/DD YYYY"
-      const weeklyPattern = /^\d{2}\/\d{2}\s+\d{4}\s+-\s+\d{2}\/\d{2}\s+\d{4}$/;
-      const isWeekly = weeklyPattern.test(pageTitle);
-
-      if (window.SimpleButtonRegistry?.debugMode) {
-        console.log(
-          `📅 Weekly page detection (fallback regex) for "${pageTitle}": ${isWeekly}`
-        );
-      }
-
-      return isWeekly;
-    },
-
     custom: (conditionFn) => {
       if (!conditionFn || typeof conditionFn !== "function") {
         return false;
@@ -381,7 +349,7 @@
     },
   };
 
-  // ==================== SIMPLE BUTTON REGISTRY v3.2 ====================
+  // ==================== SIMPLE BUTTON REGISTRY v3.1 ====================
 
   class SimpleButtonRegistry {
     constructor() {
@@ -402,7 +370,7 @@
       this.pageDetector.startMonitoring();
       this.rebuildAllButtons();
       console.log(
-        "✅ Simple Button Registry v3.2 initialized with weekly page support"
+        "✅ Simple Button Registry v3.1 initialized with monthly page support"
       );
       return true;
     }
@@ -545,60 +513,76 @@
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         color: "white",
         border: "none",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: "600",
+        borderRadius: "6px",
         fontFamily: "system-ui, -apple-system, sans-serif",
+        fontSize: "14px",
+        fontWeight: "500",
         cursor: "pointer",
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
         transition: "all 200ms ease",
-        userSelect: "none",
+        position: "relative",
+        minWidth: "120px",
         ...config.style,
       });
 
-      const dismissButton = document.createElement("span");
+      const dismissButton = document.createElement("button");
       dismissButton.textContent = "×";
       Object.assign(dismissButton.style, {
         position: "absolute",
         right: "8px",
         top: "50%",
         transform: "translateY(-50%)",
-        color: "#8b4513",
-        fontSize: "16px",
+        background: "rgba(255,255,255,0.2)",
+        color: "white",
+        border: "none",
+        borderRadius: "3px",
+        width: "20px",
+        height: "20px",
+        fontSize: "12px",
         fontWeight: "bold",
         cursor: "pointer",
-        padding: "2px 4px",
-        borderRadius: "3px",
-        transition: "background 200ms ease",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "all 200ms ease",
       });
 
-      dismissButton.addEventListener("mouseenter", () => {
-        dismissButton.style.background = "rgba(220, 38, 38, 0.8)";
-        dismissButton.style.color = "white";
-      });
-      dismissButton.addEventListener("mouseleave", () => {
-        dismissButton.style.background = "transparent";
-        dismissButton.style.color = "#8b4513";
-      });
       dismissButton.addEventListener("click", (e) => {
         e.stopPropagation();
         this.dismissButton(config.id, buttonContainer);
       });
 
+      dismissButton.addEventListener("mouseenter", () => {
+        dismissButton.style.background = "rgba(255,255,255,0.3)";
+      });
+
+      dismissButton.addEventListener("mouseleave", () => {
+        dismissButton.style.background = "rgba(255,255,255,0.2)";
+      });
+
       mainButton.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        try {
-          if (config.onClick) {
-            config.onClick();
+
+        if (config.onClick) {
+          try {
+            config.onClick({
+              buttonId: config.id,
+              buttonStack: stackName,
+              buttonPosition: stackIndex + 1,
+              currentPage: {
+                url: window.location.href,
+                title: getCurrentPageTitle(),
+              },
+            });
+          } catch (error) {
+            console.error(`❌ Button "${config.id}" click error:`, error);
           }
-        } catch (error) {
-          console.error(`❌ Button "${config.id}" click error:`, error);
         }
       });
 
       buttonContainer.appendChild(mainButton);
-      buttonContainer.appendChild(dismissButton);
+      mainButton.appendChild(dismissButton);
 
       if (position.x < 0) {
         buttonContainer.style.right = `${Math.abs(position.x)}px`;
@@ -1018,8 +1002,7 @@
         capabilities: {
           simpleButtons: true,
           compoundButtons: true,
-          monthlyPageSupport: true,
-          weeklyPageSupport: true, // 🆕 NEW
+          monthlyPageSupport: true, // 🆕 NEW
           sectionTypes: Object.keys(SECTION_TYPES),
         },
       };
@@ -1030,7 +1013,7 @@
       this.clearAllStacks();
       this.registeredButtons.clear();
       this.pageDetector.stopMonitoring();
-      console.log("🧹 Simple Button Registry v3.2 cleaned up");
+      console.log("🧹 Simple Button Registry v3.1 cleaned up");
     }
   }
 
@@ -1180,36 +1163,6 @@
       console.log("✅ Monthly page condition tests complete");
     },
 
-    // 🆕 NEW: Test weekly page conditions
-    testWeeklyPageConditions: () => {
-      console.log("🧪 Testing weekly page conditions...");
-
-      const testCases = [
-        "07/28 2025 - 08/03 2025", // Valid weekly format
-        "01/06 2024 - 01/12 2024", // Valid weekly format
-        "12/30 2024 - 01/05 2025", // Cross-year weekly format
-        "January 2025", // Monthly page (should be false)
-        "Not a weekly page", // Random page (should be false)
-        "7/28 2025 - 8/3 2025", // Single digit format (might be false)
-        "07/28/2025 - 08/03/2025", // With slashes in year (might be false)
-      ];
-
-      testCases.forEach((pageTitle) => {
-        // Temporarily override getCurrentPageTitle for testing
-        const originalGetTitle = getCurrentPageTitle;
-        window.getCurrentPageTitle = () => pageTitle;
-
-        const isWeekly = ButtonConditions.isWeeklyPage();
-
-        console.log(`📅 "${pageTitle}": weekly=${isWeekly}`);
-
-        // Restore original function
-        window.getCurrentPageTitle = originalGetTitle;
-      });
-
-      console.log("✅ Weekly page condition tests complete");
-    },
-
     testMixedButtons: async () => {
       const manager = new SimpleExtensionButtonManager("MixedTest");
       await manager.initialize();
@@ -1249,9 +1202,9 @@
     showStatus: () => {
       if (window.SimpleButtonRegistry) {
         const status = window.SimpleButtonRegistry.getStatus();
-        console.log("📊 v3.2 System Status:", status);
+        console.log("📊 v3.1 System Status:", status);
         console.log(
-          `🎯 Capabilities: Simple buttons (${status.capabilities.simpleButtons}), Compound buttons (${status.capabilities.compoundButtons}), Monthly page support (${status.capabilities.monthlyPageSupport}), Weekly page support (${status.capabilities.weeklyPageSupport})`
+          `🎯 Capabilities: Simple buttons (${status.capabilities.simpleButtons}), Compound buttons (${status.capabilities.compoundButtons}), Monthly page support (${status.capabilities.monthlyPageSupport})`
         );
         console.log(
           `🧩 Section types available: ${status.capabilities.sectionTypes.join(
@@ -1288,7 +1241,7 @@
   };
 
   console.log(`✅ ${EXTENSION_NAME} v${EXTENSION_VERSION} loaded!`);
-  console.log("🎯 NEW: Weekly page support for Calendar Suite extensions");
+  console.log("🎯 NEW: Monthly page support for Calendar Suite extensions");
   console.log("🧪 Test commands:");
   console.log(
     "  • window.SimpleButtonUtilityTests.testSimpleButton() - Test v2.1 compatibility"
@@ -1298,9 +1251,6 @@
   );
   console.log(
     "  • window.SimpleButtonUtilityTests.testMonthlyPageConditions() - Test monthly page detection"
-  );
-  console.log(
-    "  • window.SimpleButtonUtilityTests.testWeeklyPageConditions() - Test weekly page detection"
   );
   console.log(
     "  • window.SimpleButtonUtilityTests.testMixedButtons() - Test both types together"
