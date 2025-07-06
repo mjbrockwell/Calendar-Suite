@@ -63,11 +63,9 @@ function checkRequiredDependencies() {
 
   console.log("✅ All required dependencies verified");
   if (warnings.length === 0) {
-    console.log(
-      "✅ All optional dependencies available - using Simple Button Manager"
-    );
+    console.log("✅ All optional dependencies available - using Simple Button Manager");
   }
-
+  
   return true;
 }
 
@@ -574,11 +572,10 @@ async function openConfigurationModal() {
 
     // Register modal for cleanup
     dispatchToRegistry({ elements: [modal] });
+    
   } catch (error) {
     console.error("❌ Error opening setup modal:", error);
-    alert(
-      "❌ Error loading event type configurations. Please check console for details."
-    );
+    alert("❌ Error loading event type configurations. Please check console for details.");
   }
 }
 
@@ -588,17 +585,15 @@ async function openConfigurationModal() {
 async function setupSimpleButtonIntegration() {
   try {
     console.log("🎨 Initializing Simple Button Manager integration...");
-
+    
     // Initialize Simple Button Manager
-    const buttonManager = new window.SimpleExtensionButtonManager(
-      "EventTypeConfig"
-    );
+    const buttonManager = new window.SimpleExtensionButtonManager("EventTypeConfig");
     await buttonManager.initialize();
 
     // Register the event types compound button with Calendar Suite styling
     const buttonResult = await buttonManager.registerButton({
       id: "event-types-config",
-
+      
       // Compound button with professional appearance
       sections: [
         {
@@ -610,14 +605,15 @@ async function setupSimpleButtonIntegration() {
             borderRight: "1px solid #1e3a8a",
             borderTopRightRadius: "0",
             borderBottomRightRadius: "0",
-            minWidth: "40px",
+            padding: "8px 12px",
+            minWidth: "40px"
           },
           onClick: async () => {
             await openConfigurationModal();
-          },
+          }
         },
         {
-          type: "main",
+          type: "main", 
           content: "Event Types",
           tooltip: "Configure all 10 event types (#yv0 - #yv9)",
           style: {
@@ -626,49 +622,48 @@ async function setupSimpleButtonIntegration() {
             borderLeft: "none",
             borderTopLeftRadius: "0",
             borderBottomLeftRadius: "0",
-            flex: "1",
+            borderTopRightRadius: "0",
+            borderBottomRightRadius: "0",
+            padding: "8px 16px",
+            flex: "1"
           },
           onClick: async () => {
             await openConfigurationModal();
-          },
-        },
+          }
+        }
       ],
-
+      
       // Show on monthly pages and config page
       showOn: ["isMonthlyPage", "isConfigPage"],
-
+      
       // Position in top-left stack
       stack: "top-left",
-
+      
       // High priority to appear first
-      priority: true,
+      priority: true
     });
 
     if (buttonResult.success) {
-      console.log(
-        "✅ Event Types compound button registered with Simple Button Manager"
-      );
-
+      console.log("✅ Event Types compound button registered with Simple Button Manager");
+      
       // Register button manager for cleanup with existing registry system
       dispatchToRegistry({
         customCleanups: [
           () => {
             console.log("🧹 Cleaning up Simple Button Manager integration");
             buttonManager.cleanup();
-          },
-        ],
+          }
+        ]
       });
-
+      
       return true;
     } else {
       throw new Error("Failed to register button with Simple Button Manager");
     }
-  } catch (error) {
-    console.error(
-      "❌ Error setting up Simple Button Manager integration:",
-      error
-    );
 
+  } catch (error) {
+    console.error("❌ Error setting up Simple Button Manager integration:", error);
+    
     // Fallback to original floating button if Simple Button Manager fails
     console.log("🔄 Falling back to original floating button system");
     return setupFallbackButton();
@@ -686,10 +681,8 @@ function setupCustomPageConditions() {
       const pageTitle = window.getCurrentPageTitle?.() || document.title;
       return pageTitle === "roam/ext/calendar suite/config";
     };
-
-    console.log(
-      "✅ Custom page conditions registered for Simple Button Manager"
-    );
+    
+    console.log("✅ Custom page conditions registered for Simple Button Manager");
   }
 }
 
@@ -698,7 +691,7 @@ function setupCustomPageConditions() {
  */
 function setupFallbackButton() {
   console.log("⚠️ Using fallback floating button system");
-
+  
   let currentButton = null;
 
   // Function to show button on correct pages
@@ -748,9 +741,7 @@ function setupFallbackButton() {
         return monthPattern.test(pageTitle);
       },
       () => {
-        console.log(
-          "🎨 Month page detected - showing event types button (fallback)"
-        );
+        console.log("🎨 Month page detected - showing event types button (fallback)");
         showButton();
       }
     );
@@ -763,9 +754,7 @@ function setupFallbackButton() {
         return pageTitle === "roam/ext/calendar suite/config";
       },
       () => {
-        console.log(
-          "🎨 Config page detected - showing event types button (fallback)"
-        );
+        console.log("🎨 Config page detected - showing event types button (fallback)");
         showButton();
       }
     );
@@ -783,9 +772,7 @@ function setupFallbackButton() {
         return !isMonthPage && !isConfigPage;
       },
       () => {
-        console.log(
-          "🎨 Non-calendar page detected - hiding event types button (fallback)"
-        );
+        console.log("🎨 Non-calendar page detected - hiding event types button (fallback)");
         hideButton();
       }
     );
@@ -817,16 +804,13 @@ function createFallbackFloatingButton() {
   // Create compound-style button with Calendar Suite styling
   const iconSection = document.createElement("div");
   iconSection.style.cssText = `
-    ${Object.entries(calendarButtonStyle)
-      .map(
-        ([key, value]) =>
-          `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value}`
-      )
-      .join("; ")};
+    ${Object.entries(calendarButtonStyle).map(([key, value]) => 
+      `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`
+    ).join('; ')};
     border-right: 1px solid #1e3a8a;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
-    padding: 10px 12px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -838,16 +822,15 @@ function createFallbackFloatingButton() {
 
   const textSection = document.createElement("div");
   textSection.style.cssText = `
-    ${Object.entries(calendarButtonStyle)
-      .map(
-        ([key, value]) =>
-          `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value}`
-      )
-      .join("; ")};
+    ${Object.entries(calendarButtonStyle).map(([key, value]) => 
+      `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`
+    ).join('; ')};
     border-left: none;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    padding: 10px 16px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -903,23 +886,19 @@ function createFallbackFloatingButton() {
  */
 function setupCentralPageDetection() {
   console.log("🎯 Setting up button display system...");
-
+  
   // Setup custom page conditions first
   setupCustomPageConditions();
-
+  
   // Try Simple Button Manager integration, fallback if needed
   if (window.SimpleExtensionButtonManager) {
-    console.log(
-      "✅ Simple Button Manager available - using professional compound button"
-    );
+    console.log("✅ Simple Button Manager available - using professional compound button");
     setupSimpleButtonIntegration();
   } else {
-    console.log(
-      "⚠️ Simple Button Manager not available - using fallback button"
-    );
+    console.log("⚠️ Simple Button Manager not available - using fallback button");
     setupFallbackButton();
   }
-
+  
   console.log("✅ Button display system setup complete");
   return true;
 }
@@ -1043,9 +1022,7 @@ function dispatchToRegistry(resources) {
 
 const extension = {
   onload: ({ extensionAPI }) => {
-    console.group(
-      "🎨 User Setup Modal Extension v2.1 - Simple Button Manager Integration"
-    );
+    console.group("🎨 User Setup Modal Extension v2.1 - Simple Button Manager Integration");
     console.log("🚀 Loading crown jewel with professional button styling...");
 
     try {
@@ -1062,9 +1039,7 @@ const extension = {
       console.log("🎉 User Setup Modal Extension v2.1 loaded successfully!");
       console.log("🎯 Features:");
       console.log("  - ✨ NEW: Simple Button Manager v3.1 integration");
-      console.log(
-        "  - 🎨 NEW: Calendar Suite styling (pale sky blue with deep navy)"
-      );
+      console.log("  - 🎨 NEW: Calendar Suite styling (pale sky blue with deep navy)");
       console.log("  - 🔧 NEW: Professional compound button design");
       console.log("  - 🎯 Zero-polling page detection via Calendar Foundation");
       console.log("  - 🧹 Automatic resource cleanup");
@@ -1075,9 +1050,7 @@ const extension = {
       console.log("  - Navigate to any month page (e.g., 'January 2025')");
       console.log("  - Navigate to 'roam/ext/calendar suite/config'");
       console.log("  - Click the '🎨 Event Types' compound button in top-left");
-      console.log(
-        "  - Or use Command Palette: '🎨 Event Types: Open Configuration Modal'"
-      );
+      console.log("  - Or use Command Palette: '🎨 Event Types: Open Configuration Modal'");
     } catch (error) {
       console.error("❌ Error loading User Setup Modal Extension:", error);
       alert(
