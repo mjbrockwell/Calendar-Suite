@@ -1,6 +1,6 @@
 // ===================================================================
-// Simple Button Utility Extension 3.0 - Compound Button Support
-// 🎯 NEW: Compound buttons with section support
+// Simple Button Utility Extension 3.1 - Monthly Page Support Added
+// 🎯 NEW: Monthly page detection conditions for Calendar Suite
 // ✅ GUARANTEED: 100% backward compatibility with existing extensions
 // 🔧 ENHANCED: Professional multi-section button architecture
 // ===================================================================
@@ -9,7 +9,7 @@
   "use strict";
 
   const EXTENSION_NAME = "Simple Button Utility";
-  const EXTENSION_VERSION = "3.0.0"; // 🚀 NEW: Compound button support
+  const EXTENSION_VERSION = "3.1.0"; // 🆕 NEW: Monthly page support added
   const ANIMATION_DURATION = 200;
 
   // ==================== SECTION TYPE DEFINITIONS ====================
@@ -60,6 +60,31 @@
     },
   };
 
+  // ==================== BUTTON STACK CONFIGURATION ====================
+
+  const BUTTON_STACKS = {
+    "top-left": {
+      maxButtons: 5,
+      positions: [
+        { x: 20, y: 60 },
+        { x: 20, y: 110 },
+        { x: 20, y: 160 },
+        { x: 20, y: 210 },
+        { x: 20, y: 260 },
+      ],
+    },
+    "top-right": {
+      maxButtons: 5,
+      positions: [
+        { x: -20, y: 60 },
+        { x: -20, y: 110 },
+        { x: -20, y: 160 },
+        { x: -20, y: 210 },
+        { x: -20, y: 260 },
+      ],
+    },
+  };
+
   // ==================== CENTRALIZED PAGE TITLE DETECTION ====================
 
   function getCurrentPageTitle() {
@@ -75,147 +100,77 @@
       ];
 
       for (const selector of titleSelectors) {
-        const titleElement = document.querySelector(selector);
-        if (titleElement) {
-          const titleText = titleElement.textContent?.trim();
-          if (titleText && titleText !== "") {
-            if (window.SimpleButtonRegistry?.debugMode) {
-              console.log(`📄 Got page title from ${selector}: "${titleText}"`);
-            }
-            return titleText;
+        const element = document.querySelector(selector);
+        if (element?.textContent?.trim()) {
+          return element.textContent.trim();
+        }
+      }
+
+      const hash = window.location.hash;
+      if (hash) {
+        const match = hash.match(/#\/app\/[^\/]+\/page\/(.+)$/);
+        if (match) {
+          const encoded = match[1];
+          try {
+            return decodeURIComponent(encoded);
+          } catch (error) {
+            return encoded;
           }
         }
       }
 
-      if (document.title && document.title !== "Roam") {
-        const titleText = document.title
-          .replace(" - Roam", "")
-          .replace(" | Roam Research", "")
-          .trim();
-        if (titleText && titleText !== "") {
-          if (window.SimpleButtonRegistry?.debugMode) {
-            console.log(
-              `📄 Got page title from document.title: "${titleText}"`
-            );
-          }
-          return titleText;
-        }
-      }
-
-      const url = window.location.href;
-      const pageMatch = url.match(/\/page\/([^/?#]+)/);
-      if (pageMatch) {
-        const pageId = decodeURIComponent(pageMatch[1]);
-        console.warn(`⚠️ Falling back to page ID (not title): "${pageId}"`);
-        return pageId;
-      }
-
-      console.warn("❌ Could not determine page title");
       return null;
     } catch (error) {
-      console.error("❌ Failed to get current page title:", error);
+      console.warn("❌ Error getting page title:", error);
       return null;
     }
   }
 
-  // ==================== BUTTON STACK POSITIONING ====================
-
-  const BUTTON_STACKS = {
-    "top-left": {
-      maxButtons: 2,
-      positions: [
-        { x: 14, y: 6 },
-        { x: 14, y: 54 },
-      ],
-    },
-    "top-right": {
-      maxButtons: 5,
-      positions: [
-        { x: -14, y: 6 },
-        { x: -14, y: 54 },
-        { x: -14, y: 102 },
-        { x: -14, y: 150 },
-        { x: -14, y: 198 },
-      ],
-    },
-  };
-
-  // ==================== PAGE CHANGE DETECTOR ====================
+  // ==================== SIMPLE PAGE CHANGE DETECTOR ====================
 
   class SimplePageChangeDetector {
     constructor() {
-      this.currentUrl = window.location.href;
-      this.currentTitle = document.title;
       this.listeners = new Set();
+      this.currentUrl = window.location.href;
+      this.currentTitle = getCurrentPageTitle();
       this.isMonitoring = false;
+      this.observer = null;
     }
 
     startMonitoring() {
       if (this.isMonitoring) return;
-      this.setupURLListeners();
-      this.setupTitleListener();
-      this.setupPeriodicCheck();
-      this.isMonitoring = true;
-      console.log("🚀 Simple page monitoring started");
-    }
 
-    stopMonitoring() {
-      if (!this.isMonitoring) return;
-      window.removeEventListener("popstate", this.boundURLChange);
-      if (this.originalPushState) history.pushState = this.originalPushState;
-      if (this.originalReplaceState)
-        history.replaceState = this.originalReplaceState;
-      if (this.titleObserver) this.titleObserver.disconnect();
-      if (this.checkInterval) clearInterval(this.checkInterval);
-      this.isMonitoring = false;
-      console.log("🛑 Simple page monitoring stopped");
-    }
-
-    setupURLListeners() {
-      this.boundURLChange = () => this.checkForPageChange();
-      window.addEventListener("popstate", this.boundURLChange);
-
-      this.originalPushState = history.pushState;
-      this.originalReplaceState = history.replaceState;
-
-      const self = this;
-      history.pushState = function (...args) {
-        self.originalPushState.apply(history, args);
-        setTimeout(() => self.checkForPageChange(), 50);
-      };
-
-      history.replaceState = function (...args) {
-        self.originalReplaceState.apply(history, args);
-        setTimeout(() => self.checkForPageChange(), 50);
-      };
-    }
-
-    setupTitleListener() {
-      const self = this;
-      this.titleObserver = new MutationObserver(() => {
-        if (document.title !== self.currentTitle) {
-          setTimeout(() => self.checkForPageChange(), 50);
-        }
+      this.observer = new MutationObserver(() => {
+        this.checkPageChange();
       });
 
-      this.titleObserver.observe(document.head, {
+      this.observer.observe(document.body, {
         childList: true,
         subtree: true,
       });
+
+      window.addEventListener("popstate", () => this.checkPageChange());
+      window.addEventListener("hashchange", () => this.checkPageChange());
+
+      this.isMonitoring = true;
+      console.log("🔍 Simple page change detection started");
     }
 
-    setupPeriodicCheck() {
-      this.checkInterval = setInterval(() => {
-        this.checkForPageChange();
-      }, 3000);
+    stopMonitoring() {
+      if (this.observer) {
+        this.observer.disconnect();
+        this.observer = null;
+      }
+
+      this.isMonitoring = false;
+      console.log("🔍 Simple page change detection stopped");
     }
 
-    checkForPageChange() {
+    checkPageChange() {
       const newUrl = window.location.href;
-      const newTitle = document.title;
+      const newTitle = getCurrentPageTitle();
 
       if (newUrl !== this.currentUrl || newTitle !== this.currentTitle) {
-        console.log(`📄 Page changed: ${this.currentUrl} → ${newUrl}`);
         this.currentUrl = newUrl;
         this.currentTitle = newTitle;
 
@@ -235,7 +190,7 @@
     }
   }
 
-  // ==================== BUTTON CONDITIONS ====================
+  // ==================== BUTTON CONDITIONS (Enhanced with Monthly Page Support) ====================
 
   const ButtonConditions = {
     isUsernamePage: () => {
@@ -305,6 +260,81 @@
       );
     },
 
+    // 🆕 NEW: Monthly page detection for Calendar Suite
+    isMonthlyPage: () => {
+      const pageTitle = getCurrentPageTitle();
+      if (!pageTitle) return false;
+
+      // Matches "January 2025", "February 2024", etc.
+      const isMonthly =
+        /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$/.test(
+          pageTitle
+        );
+
+      if (window.SimpleButtonRegistry?.debugMode) {
+        console.log(
+          `📅 Monthly page detection for "${pageTitle}": ${isMonthly}`
+        );
+      }
+
+      return isMonthly;
+    },
+
+    // 🆕 NEW: Enhanced condition to check if monthly page has NO content
+    isEmptyMonthlyPage: () => {
+      const pageTitle = getCurrentPageTitle();
+      if (!pageTitle) return false;
+
+      // First check if it's a monthly page
+      const isMonthly =
+        /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$/.test(
+          pageTitle
+        );
+      if (!isMonthly) return false;
+
+      // Then check if it has calendar content
+      try {
+        const pageUid = window.roamAlphaAPI?.data?.q(
+          `[:find ?uid . :in $ ?title :where [?page :node/title ?title] [?page :block/uid ?uid]]`,
+          pageTitle
+        );
+
+        if (!pageUid) return true; // Page doesn't exist = empty
+
+        const children = window.roamAlphaAPI?.data?.q(
+          `[:find (pull ?child [:block/string]) :in $ ?page-uid :where [?page :block/uid ?page-uid] [?page :block/children ?child]]`,
+          pageUid
+        );
+
+        if (!children || children.length === 0) return true; // No content
+
+        // Check if has week-related content
+        const hasWeekContent = children.some((child) => {
+          const blockText = child[0]?.string || "";
+          return (
+            blockText.includes("Week") ||
+            blockText.includes("Monday") ||
+            blockText.includes("TODO")
+          );
+        });
+
+        if (window.SimpleButtonRegistry?.debugMode) {
+          console.log(
+            `📅 Empty monthly page detection for "${pageTitle}": ${!hasWeekContent} (${
+              children.length
+            } blocks, hasWeekContent: ${hasWeekContent})`
+          );
+        }
+
+        return !hasWeekContent; // Empty if no week content
+      } catch (error) {
+        if (window.SimpleButtonRegistry?.debugMode) {
+          console.warn("⚠️ Error checking monthly page content:", error);
+        }
+        return true; // Assume empty on error
+      }
+    },
+
     custom: (conditionFn) => {
       if (!conditionFn || typeof conditionFn !== "function") {
         return false;
@@ -318,7 +348,7 @@
     },
   };
 
-  // ==================== SIMPLE BUTTON REGISTRY v3.0 ====================
+  // ==================== SIMPLE BUTTON REGISTRY v3.1 ====================
 
   class SimpleButtonRegistry {
     constructor() {
@@ -339,7 +369,7 @@
       this.pageDetector.startMonitoring();
       this.rebuildAllButtons();
       console.log(
-        "✅ Simple Button Registry v3.0 initialized with compound button support"
+        "✅ Simple Button Registry v3.1 initialized with monthly page support"
       );
       return true;
     }
@@ -371,81 +401,50 @@
     // ==================== CORE REBUILD LOGIC ====================
 
     rebuildAllButtons() {
-      console.log("🔄 Rebuilding all buttons for current page...");
-      if (this.debugMode) {
-        console.log("📍 Current location:", {
-          url: window.location.href,
-          title: getCurrentPageTitle(),
-        });
-      }
+      console.log("🔄 Rebuilding all buttons for current page");
 
       this.clearAllButtons();
       this.clearAllStacks();
-
-      if (this.debugMode) {
-        console.log(
-          `📋 Evaluating ${this.registeredButtons.size} registered buttons`
-        );
-      }
 
       const visibleButtons = [];
       this.registeredButtons.forEach((config) => {
         if (this.shouldButtonBeVisible(config)) {
           visibleButtons.push(config);
-          if (this.debugMode) {
-            console.log(`✅ Button "${config.id}" will be shown`);
-          }
-        } else {
-          if (this.debugMode) {
-            console.log(`❌ Button "${config.id}" will be hidden`);
-          }
         }
       });
 
-      if (this.debugMode) {
-        console.log(
-          `📊 Visibility results: ${visibleButtons.length}/${this.registeredButtons.size} buttons will be shown`
-        );
+      if (visibleButtons.length === 0) {
+        return;
       }
 
-      visibleButtons.sort((a, b) => {
-        if (a.priority && !b.priority) return -1;
-        if (!a.priority && b.priority) return 1;
-        return 0;
-      });
-
-      visibleButtons.forEach((config) => {
-        this.assignButtonToStack(config);
-      });
-
+      this.assignButtonsToStacks(visibleButtons);
       this.placeAllStackedButtons();
 
       console.log(
-        `✅ Button rebuild complete (${this.activeButtons.size} visible)`
+        `✅ Placed ${this.activeButtons.size}/${this.registeredButtons.size} buttons`
       );
-
-      if (this.debugMode) {
-        console.log("📊 Final button status:", {
-          registered: Array.from(this.registeredButtons.keys()),
-          visible: Array.from(this.activeButtons.keys()),
-          stacks: {
-            "top-left": this.stacks["top-left"].map((b) => b.id),
-            "top-right": this.stacks["top-right"].map((b) => b.id),
-          },
-        });
-      }
     }
 
     clearAllButtons() {
-      this.activeButtons.forEach((element) => {
-        element.remove();
+      this.activeButtons.forEach((button) => {
+        if (button.parentNode) {
+          button.remove();
+        }
       });
       this.activeButtons.clear();
     }
 
     clearAllStacks() {
-      this.stacks["top-left"] = [];
-      this.stacks["top-right"] = [];
+      this.stacks = { "top-left": [], "top-right": [] };
+    }
+
+    assignButtonsToStacks(buttons) {
+      const priorityButtons = buttons.filter((b) => b.priority);
+      const regularButtons = buttons.filter((b) => !b.priority);
+
+      [...priorityButtons, ...regularButtons].forEach((config) => {
+        this.assignButtonToStack(config);
+      });
     }
 
     assignButtonToStack(config) {
@@ -472,10 +471,9 @@
       });
     }
 
-    // ==================== ✨ NEW: COMPOUND BUTTON DETECTION ====================
+    // ==================== ✨ COMPOUND BUTTON DETECTION ====================
 
     createAndPlaceButton(config, stackName, stackIndex) {
-      // 🚀 NEW: Detection logic for simple vs compound buttons
       if (
         config.sections &&
         Array.isArray(config.sections) &&
@@ -496,7 +494,6 @@
     // ==================== ✅ SIMPLE BUTTON (100% BACKWARD COMPATIBLE) ====================
 
     createSimpleButton(config, stackName, stackIndex) {
-      // ✅ EXACT v2.1 behavior - no changes to existing functionality
       const buttonContainer = document.createElement("div");
       buttonContainer.style.position = "absolute";
       buttonContainer.style.display = "flex";
@@ -516,71 +513,76 @@
         color: "white",
         border: "none",
         borderRadius: "6px",
-        fontSize: "13px",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontSize: "14px",
         fontWeight: "500",
         cursor: "pointer",
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-        userSelect: "none",
         transition: "all 200ms ease",
-        whiteSpace: "nowrap",
         position: "relative",
+        minWidth: "120px",
+        ...config.style,
       });
 
-      if (config.style) {
-        Object.assign(mainButton.style, config.style);
-        if (!config.style.paddingRight) {
-          mainButton.style.paddingRight = "32px";
-        }
-      }
-
-      // Dismiss button (exact v2.1 behavior)
-      const dismissButton = document.createElement("span");
-      dismissButton.innerHTML = "×";
-      dismissButton.style.cssText = `
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 16px;
-        height: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        color: #8b4513;
-        font-size: 14px;
-        font-weight: bold;
-        border-radius: 2px;
-        transition: all 150ms ease;
-        user-select: none;
-        line-height: 1;
-      `;
-
-      dismissButton.addEventListener("mouseenter", () => {
-        dismissButton.style.backgroundColor = "rgba(139, 69, 19, 0.15)";
-        dismissButton.style.color = "#6b4423";
-      });
-
-      dismissButton.addEventListener("mouseleave", () => {
-        dismissButton.style.backgroundColor = "transparent";
-        dismissButton.style.color = "#8b4513";
+      const dismissButton = document.createElement("button");
+      dismissButton.textContent = "×";
+      Object.assign(dismissButton.style, {
+        position: "absolute",
+        right: "8px",
+        top: "50%",
+        transform: "translateY(-50%)",
+        background: "rgba(255,255,255,0.2)",
+        color: "white",
+        border: "none",
+        borderRadius: "3px",
+        width: "20px",
+        height: "20px",
+        fontSize: "12px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "all 200ms ease",
       });
 
       dismissButton.addEventListener("click", (e) => {
-        e.preventDefault();
         e.stopPropagation();
-        console.log(`🗑️ Dismissing simple button "${config.id}"`);
-        if (buttonContainer.parentNode) {
-          buttonContainer.remove();
-        }
-        this.activeButtons.delete(config.id);
-        console.log(`✅ Simple button "${config.id}" dismissed`);
+        this.dismissButton(config.id, buttonContainer);
       });
 
-      mainButton.appendChild(dismissButton);
-      buttonContainer.appendChild(mainButton);
+      dismissButton.addEventListener("mouseenter", () => {
+        dismissButton.style.background = "rgba(255,255,255,0.3)";
+      });
 
-      // Position the container
+      dismissButton.addEventListener("mouseleave", () => {
+        dismissButton.style.background = "rgba(255,255,255,0.2)";
+      });
+
+      mainButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (config.onClick) {
+          try {
+            config.onClick({
+              buttonId: config.id,
+              buttonStack: stackName,
+              buttonPosition: stackIndex + 1,
+              currentPage: {
+                url: window.location.href,
+                title: getCurrentPageTitle(),
+              },
+            });
+          } catch (error) {
+            console.error(`❌ Button "${config.id}" click error:`, error);
+          }
+        }
+      });
+
+      buttonContainer.appendChild(mainButton);
+      mainButton.appendChild(dismissButton);
+
       if (position.x < 0) {
         buttonContainer.style.right = `${Math.abs(position.x)}px`;
         buttonContainer.style.left = "auto";
@@ -590,37 +592,13 @@
       }
       buttonContainer.style.top = `${position.y}px`;
 
-      // Main button click handler
-      mainButton.addEventListener("click", (e) => {
-        if (e.target === dismissButton) {
-          return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-
-        try {
-          config.onClick({
-            buttonId: config.id,
-            buttonStack: stackName,
-            buttonPosition: stackIndex + 1,
-            currentPage: {
-              url: window.location.href,
-              title: getCurrentPageTitle(),
-            },
-          });
-        } catch (error) {
-          console.error(`❌ Simple button "${config.id}" click error:`, error);
-        }
-      });
-
-      // Hover effects
-      mainButton.addEventListener("mouseenter", () => {
-        mainButton.style.transform = "translateY(-1px)";
+      buttonContainer.addEventListener("mouseenter", () => {
+        buttonContainer.style.transform = "translateY(-1px)";
         mainButton.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
       });
 
-      mainButton.addEventListener("mouseleave", () => {
-        mainButton.style.transform = "translateY(0)";
+      buttonContainer.addEventListener("mouseleave", () => {
+        buttonContainer.style.transform = "translateY(0)";
         mainButton.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
       });
 
@@ -635,15 +613,15 @@
       );
     }
 
-    // ==================== 🚀 NEW: COMPOUND BUTTON IMPLEMENTATION ====================
+    // ==================== 🚀 COMPOUND BUTTON (NEW FUNCTIONALITY) ====================
 
     createCompoundButton(config, stackName, stackIndex) {
       const buttonContainer = document.createElement("div");
       buttonContainer.style.position = "absolute";
       buttonContainer.style.display = "flex";
-      buttonContainer.style.alignItems = "stretch";
+      buttonContainer.style.alignItems = "center";
       buttonContainer.style.zIndex = "10000";
-      buttonContainer.style.borderRadius = "6px";
+      buttonContainer.style.borderRadius = "8px";
       buttonContainer.style.overflow = "hidden";
       buttonContainer.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
       buttonContainer.style.transition = "all 200ms ease";
@@ -651,7 +629,6 @@
       const stackConfig = BUTTON_STACKS[stackName];
       const position = stackConfig.positions[stackIndex];
 
-      // Process sections and auto-add dismiss if not present
       let sections = [...config.sections];
       const hasDismissSection = sections.some(
         (section) => section.type === "dismiss"
@@ -664,7 +641,6 @@
         });
       }
 
-      // Create each section
       sections.forEach((section, index) => {
         const sectionElement = this.createSection(
           section,
@@ -677,7 +653,6 @@
         buttonContainer.appendChild(sectionElement);
       });
 
-      // Position the container
       if (position.x < 0) {
         buttonContainer.style.right = `${Math.abs(position.x)}px`;
         buttonContainer.style.left = "auto";
@@ -687,7 +662,6 @@
       }
       buttonContainer.style.top = `${position.y}px`;
 
-      // Container hover effects
       buttonContainer.addEventListener("mouseenter", () => {
         buttonContainer.style.transform = "translateY(-1px)";
         buttonContainer.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
@@ -718,75 +692,49 @@
       stackIndex
     ) {
       const sectionElement = document.createElement("div");
+      const sectionType = SECTION_TYPES[section.type];
 
-      // Get section type configuration
-      const sectionType = SECTION_TYPES[section.type] || SECTION_TYPES.action;
-
-      // Apply base styling
       Object.assign(sectionElement.style, {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        userSelect: "none",
-        transition: "all 150ms ease",
-        backgroundColor: "rgba(255, 255, 255, 0.9)",
-        color: "#333",
-        fontSize: "13px",
-        fontWeight: "500",
-        whiteSpace: "nowrap",
         ...sectionType.defaultStyle,
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        color: "white",
+        fontSize: "14px",
+        borderRight:
+          index < totalSections - 1
+            ? "1px solid rgba(255,255,255,0.2)"
+            : "none",
+        transition: "all 200ms ease",
+        cursor: "pointer",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        userSelect: "none",
+        ...section.style,
       });
 
-      // Apply custom section styles
-      if (section.style) {
-        Object.assign(sectionElement.style, section.style);
-      }
+      sectionElement.textContent = section.content || "";
 
-      // Add visual separators between sections
-      if (index > 0) {
-        sectionElement.style.borderLeft = "1px solid rgba(0,0,0,0.1)";
-      }
-
-      // Set section content
-      if (section.content) {
-        if (typeof section.content === "string") {
-          sectionElement.textContent = section.content;
-        } else {
-          sectionElement.appendChild(section.content);
-        }
-      }
-
-      // Add tooltip if provided
       if (section.tooltip) {
-        sectionElement.setAttribute("title", section.tooltip);
+        sectionElement.title = section.tooltip;
       }
 
-      // Section-specific hover effects
       sectionElement.addEventListener("mouseenter", () => {
-        switch (section.type) {
-          case "dismiss":
-            sectionElement.style.backgroundColor = "rgba(220, 53, 69, 0.1)";
-            sectionElement.style.color = "#dc3545";
-            break;
-          case "icon":
-            sectionElement.style.backgroundColor = "rgba(255, 193, 7, 0.1)";
-            break;
-          case "main":
-            sectionElement.style.backgroundColor = "rgba(0, 123, 255, 0.1)";
-            break;
-          default:
-            sectionElement.style.backgroundColor = "rgba(108, 117, 125, 0.1)";
-        }
+        sectionElement.style.background =
+          section.type === "dismiss"
+            ? "rgba(220, 38, 38, 0.8)"
+            : section.style?.background || "#6366f1";
+        sectionElement.style.color =
+          section.type === "dismiss"
+            ? "white"
+            : section.style?.color || "white";
       });
 
       sectionElement.addEventListener("mouseleave", () => {
-        sectionElement.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+        sectionElement.style.background =
+          section.style?.background ||
+          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
         sectionElement.style.color =
           section.type === "dismiss" ? "#8b4513" : "#333";
       });
 
-      // Click handling
       sectionElement.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -811,6 +759,15 @@
       });
 
       return sectionElement;
+    }
+
+    dismissButton(buttonId, buttonContainer) {
+      console.log(`🗑️ Dismissing button "${buttonId}"`);
+      if (buttonContainer.parentNode) {
+        buttonContainer.remove();
+      }
+      this.activeButtons.delete(buttonId);
+      console.log(`✅ Button "${buttonId}" dismissed`);
     }
 
     dismissCompoundButton(buttonId, buttonContainer) {
@@ -924,12 +881,10 @@
     registerButton(config) {
       const { id, text, onClick, sections } = config;
 
-      // Enhanced validation for compound buttons
       if (sections) {
         if (!Array.isArray(sections)) {
           throw new Error(`Button "${id}" sections must be an array`);
         }
-        // Validate each section
         sections.forEach((section, index) => {
           if (!section.type) {
             throw new Error(`Button "${id}" section ${index} must have a type`);
@@ -941,7 +896,6 @@
           }
         });
       } else {
-        // Standard validation for simple buttons
         if (!id || !text || !onClick) {
           throw new Error("Simple button must have id, text, and onClick");
         }
@@ -960,12 +914,11 @@
         );
       }
 
-      // Store configuration
       this.registeredButtons.set(id, {
         id,
-        text: text || null, // ✅ Backward compatibility
-        onClick: onClick || null, // ✅ Backward compatibility
-        sections: sections || null, // 🚀 New compound functionality
+        text: text || null,
+        onClick: onClick || null,
+        sections: sections || null,
         stack,
         priority: config.priority || false,
         showOn: config.showOn || null,
@@ -1034,6 +987,7 @@
         capabilities: {
           simpleButtons: true,
           compoundButtons: true,
+          monthlyPageSupport: true, // 🆕 NEW
           sectionTypes: Object.keys(SECTION_TYPES),
         },
       };
@@ -1044,7 +998,7 @@
       this.clearAllStacks();
       this.registeredButtons.clear();
       this.pageDetector.stopMonitoring();
-      console.log("🧹 Simple Button Registry v3.0 cleaned up");
+      console.log("🧹 Simple Button Registry v3.1 cleaned up");
     }
   }
 
@@ -1110,12 +1064,10 @@
   // ==================== TESTING UTILITIES ====================
 
   window.SimpleButtonUtilityTests = {
-    // ✅ Test backward compatibility
     testSimpleButton: async () => {
       const manager = new SimpleExtensionButtonManager("CompatibilityTest");
       await manager.initialize();
 
-      // This should work EXACTLY as before
       await manager.registerButton({
         id: "simple-test",
         text: "🧪 Simple Test",
@@ -1128,7 +1080,6 @@
       console.log("✅ Simple button compatibility test complete");
     },
 
-    // 🚀 Test new compound functionality
     testCompoundButton: async () => {
       const manager = new SimpleExtensionButtonManager("CompoundTest");
       await manager.initialize();
@@ -1154,7 +1105,6 @@
             tooltip: "Stats",
             onClick: () => console.log("Stats clicked!"),
           },
-          // dismiss section auto-added
         ],
         showOn: ["isMainPage"],
         stack: "top-right",
@@ -1166,12 +1116,42 @@
       );
     },
 
-    // 🔄 Test mixed button types
+    // 🆕 NEW: Test monthly page conditions
+    testMonthlyPageConditions: () => {
+      console.log("🧪 Testing monthly page conditions...");
+
+      const testCases = [
+        "January 2025",
+        "February 2024",
+        "March 2023",
+        "Not a monthly page",
+        "January2025", // No space
+        "january 2025", // Lowercase
+      ];
+
+      testCases.forEach((pageTitle) => {
+        // Temporarily override getCurrentPageTitle for testing
+        const originalGetTitle = getCurrentPageTitle;
+        window.getCurrentPageTitle = () => pageTitle;
+
+        const isMonthly = ButtonConditions.isMonthlyPage();
+        const isEmpty = ButtonConditions.isEmptyMonthlyPage();
+
+        console.log(
+          `📅 "${pageTitle}": monthly=${isMonthly}, empty=${isEmpty}`
+        );
+
+        // Restore original function
+        window.getCurrentPageTitle = originalGetTitle;
+      });
+
+      console.log("✅ Monthly page condition tests complete");
+    },
+
     testMixedButtons: async () => {
       const manager = new SimpleExtensionButtonManager("MixedTest");
       await manager.initialize();
 
-      // Simple button
       await manager.registerButton({
         id: "mixed-simple",
         text: "📝 Simple",
@@ -1180,7 +1160,6 @@
         stack: "top-left",
       });
 
-      // Compound button
       await manager.registerButton({
         id: "mixed-compound",
         sections: [
@@ -1205,13 +1184,12 @@
       );
     },
 
-    // 📊 Show system status
     showStatus: () => {
       if (window.SimpleButtonRegistry) {
         const status = window.SimpleButtonRegistry.getStatus();
-        console.log("📊 v3.0 System Status:", status);
+        console.log("📊 v3.1 System Status:", status);
         console.log(
-          `🎯 Capabilities: Simple buttons (${status.capabilities.simpleButtons}), Compound buttons (${status.capabilities.compoundButtons})`
+          `🎯 Capabilities: Simple buttons (${status.capabilities.simpleButtons}), Compound buttons (${status.capabilities.compoundButtons}), Monthly page support (${status.capabilities.monthlyPageSupport})`
         );
         console.log(
           `🧩 Section types available: ${status.capabilities.sectionTypes.join(
@@ -1223,7 +1201,6 @@
       }
     },
 
-    // Clean up all tests
     cleanup: () => {
       if (window.SimpleButtonRegistry) {
         window.SimpleButtonRegistry.cleanup();
@@ -1249,15 +1226,16 @@
   };
 
   console.log(`✅ ${EXTENSION_NAME} v${EXTENSION_VERSION} loaded!`);
-  console.log(
-    "🎯 NEW: Compound button support with 100% backward compatibility"
-  );
+  console.log("🎯 NEW: Monthly page support for Calendar Suite extensions");
   console.log("🧪 Test commands:");
   console.log(
     "  • window.SimpleButtonUtilityTests.testSimpleButton() - Test v2.1 compatibility"
   );
   console.log(
     "  • window.SimpleButtonUtilityTests.testCompoundButton() - Test new compound buttons"
+  );
+  console.log(
+    "  • window.SimpleButtonUtilityTests.testMonthlyPageConditions() - Test monthly page detection"
   );
   console.log(
     "  • window.SimpleButtonUtilityTests.testMixedButtons() - Test both types together"
