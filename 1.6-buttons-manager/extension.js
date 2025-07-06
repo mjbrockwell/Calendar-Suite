@@ -1,6 +1,7 @@
 // ===================================================================
-// Simple Button Utility Extension 3.1 - Monthly Page Support Added
-// 🎯 NEW: Monthly page detection conditions for Calendar Suite
+// Simple Button Utility Extension 3.1.1 - Perfect Border Radius Fix
+// 🎨 FIXED: Compound buttons now have perfect rounded corners
+// 🆕 NEW: Monthly page detection conditions for Calendar Suite
 // ✅ GUARANTEED: 100% backward compatibility with existing extensions
 // 🔧 ENHANCED: Professional multi-section button architecture
 // ===================================================================
@@ -9,7 +10,7 @@
   "use strict";
 
   const EXTENSION_NAME = "Simple Button Utility";
-  const EXTENSION_VERSION = "3.1.0"; // 🆕 NEW: Monthly page support added
+  const EXTENSION_VERSION = "3.1.1"; // 🎨 FIXED: Perfect border-radius for compound buttons
   const ANIMATION_DURATION = 200;
 
   // ==================== SECTION TYPE DEFINITIONS ====================
@@ -694,6 +695,19 @@
       const sectionElement = document.createElement("div");
       const sectionType = SECTION_TYPES[section.type];
 
+      // 🎨 Calculate border-radius for perfect rounded corners
+      let borderRadius = {};
+      if (index === 0) {
+        // First section - round left corners
+        borderRadius.borderTopLeftRadius = "8px";
+        borderRadius.borderBottomLeftRadius = "8px";
+      }
+      if (index === totalSections - 1) {
+        // Last section - round right corners
+        borderRadius.borderTopRightRadius = "8px";
+        borderRadius.borderBottomRightRadius = "8px";
+      }
+
       Object.assign(sectionElement.style, {
         ...sectionType.defaultStyle,
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -707,6 +721,7 @@
         cursor: "pointer",
         fontFamily: "system-ui, -apple-system, sans-serif",
         userSelect: "none",
+        ...borderRadius, // 🎨 Apply calculated border-radius
         ...section.style,
       });
 
