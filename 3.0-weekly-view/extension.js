@@ -44,6 +44,7 @@
     background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)", // Pale sky blue gradient
     border: "1.5px solid #1e3a8a", // Deep navy border
     color: "#1e3a8a", // Deep navy text
+    fontFamily: "inherit",
     fontWeight: "600",
     padding: "10px 16px",
     borderRadius: "12px",
